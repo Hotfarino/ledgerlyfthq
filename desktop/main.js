@@ -129,7 +129,7 @@ function createWindow() {
     height: 920,
     minWidth: 1120,
     minHeight: 760,
-    title: "LedgerLift",
+    title: "ledgerlyftHQ",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js")
@@ -146,8 +146,8 @@ app.whenReady().then(async () => {
   } catch (error) {
     await dialog.showMessageBox({
       type: "error",
-      title: "LedgerLift Startup Error",
-      message: "Could not start LedgerLift services.",
+      title: "ledgerlyftHQ Startup Error",
+      message: "Could not start ledgerlyftHQ services.",
       detail: error instanceof Error ? error.message : String(error)
     });
     await stopServices();

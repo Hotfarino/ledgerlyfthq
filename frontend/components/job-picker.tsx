@@ -45,8 +45,8 @@ export function JobPicker() {
       >
         <option value="">Select a job</option>
         {jobs.map((job) => (
-          <option key={job.id} value={job.id}>
-            {job.file_name} ({job.id.slice(0, 8)})
+          <option key={job.job_id} value={job.job_id}>
+            {job.file_name} ({job.job_id.slice(0, 8)})
           </option>
         ))}
       </select>

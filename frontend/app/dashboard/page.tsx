@@ -70,11 +70,11 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {jobs.slice(0, 8).map((job) => (
-                  <tr key={job.id}>
+                  <tr key={job.job_id}>
                     <td>{job.file_name}</td>
                     <td>{job.row_count}</td>
                     <td>{new Date(job.uploaded_at).toLocaleString()}</td>
-                    <td className="font-mono text-xs">{job.id.slice(0, 12)}</td>
+                    <td className="font-mono text-xs">{job.job_id.slice(0, 12)}</td>
                   </tr>
                 ))}
                 {jobs.length === 0 ? (
@@ -91,7 +91,7 @@ export default function DashboardPage() {
 
         <SectionCard title="Workflow Guardrails">
           <ul className="space-y-2 text-sm text-muted">
-            <li>LedgerLift accelerates cleanup. It does not replace accounting judgment.</li>
+            <li>ledgerlyftHQ accelerates cleanup. It does not replace accounting judgment.</li>
             <li>Duplicates, exceptions, and category suggestions always require reviewer approval.</li>
             <li>Phase 1 is local-first with CSV/XLSX file upload and local export outputs.</li>
             <li>No live QuickBooks API connection is used in this phase.</li>

@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
+
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
@@ -53,7 +54,7 @@ export default function DuplicatesPage() {
     <div>
       <PageTitle
         title="Duplicate Review"
-        subtitle="Exact and near-duplicate candidates are listed with confidence for reviewer approval."
+        subtitle="Exact and likely duplicates are grouped for manual review."
         actions={<JobPicker />}
       />
 
@@ -91,12 +92,12 @@ export default function DuplicatesPage() {
       </SectionCard>
 
       <div className="mt-6">
-        <SectionCard title="Suspected Duplicates">
+        <SectionCard title="Duplicate Candidates">
           {error ? <p className="mb-3 text-sm text-bad">{error}</p> : null}
           {!jobId ? (
             <EmptyState text="Select a job to inspect duplicate candidates." />
           ) : filtered.length === 0 ? (
-            <EmptyState text="No suspected duplicates for this selection." />
+            <EmptyState text="No duplicate candidates for this selection." />
           ) : (
             <div className="table-wrap">
               <table className="data-table">
@@ -104,7 +105,8 @@ export default function DuplicatesPage() {
                   <tr>
                     <th>Confidence</th>
                     <th>Match Type</th>
-                    <th>Rows</th>
+                    <th>Source Rows</th>
+                    <th>Row IDs</th>
                     <th>Reason</th>
                     <th>Reviewed</th>
                   </tr>
@@ -114,7 +116,8 @@ export default function DuplicatesPage() {
                     <tr key={item.id}>
                       <td>{item.confidence}</td>
                       <td>{item.match_type}</td>
-                      <td>{item.row_indices.map((index) => index + 1).join(", ")}</td>
+                      <td>{item.source_row_indexes.map((index) => index + 1).join(", ")}</td>
+                      <td className="font-mono text-xs">{item.row_ids.join(", ")}</td>
                       <td>{item.reason}</td>
                       <td>{item.reviewed ? "yes" : "no"}</td>
                     </tr>

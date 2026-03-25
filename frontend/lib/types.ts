@@ -1,25 +1,33 @@
 export type ConfidenceLevel = "high" | "medium" | "low";
 export type ReviewStatus = "pending" | "reviewed" | "approved";
 
-export interface UploadedFile {
-  id: string;
+export interface UploadJob {
   job_id: string;
   file_name: string;
   file_type: string;
   file_path: string;
   uploaded_at: string;
   row_count: number;
+  source_headers: string[];
   column_mapping: Record<string, string>;
 }
 
 export interface TransactionRow {
+  row_id: string;
   job_id: string;
-  row_index: number;
-  transaction_id?: string | null;
-  original_values: Record<string, unknown>;
-  cleaned_values: Record<string, unknown>;
+  source_row_index: number;
+  date?: string;
+  description?: string;
+  payee?: string;
+  amount?: number | null;
+  debit?: number | null;
+  credit?: number | null;
+  category?: string;
+  account?: string;
+  notes?: string;
   flags: string[];
-  notes?: string | null;
+  cleaned_values: Record<string, unknown>;
+  original_values: Record<string, unknown>;
   review_status: ReviewStatus;
   category_suggestion?: string | null;
   category_confidence?: ConfidenceLevel | null;
@@ -28,7 +36,8 @@ export interface TransactionRow {
 export interface ExceptionFlag {
   id: string;
   job_id: string;
-  row_index: number;
+  row_id: string;
+  source_row_index: number;
   flag_type: string;
   severity: string;
   message: string;
@@ -39,7 +48,8 @@ export interface ExceptionFlag {
 export interface DuplicateGroup {
   id: string;
   job_id: string;
-  row_indices: number[];
+  row_ids: string[];
+  source_row_indexes: number[];
   confidence: ConfidenceLevel;
   match_type: string;
   reason: string;
@@ -61,7 +71,8 @@ export interface CategoryRule {
 export interface AuditEntry {
   id: string;
   job_id: string;
-  row_index?: number | null;
+  row_id?: string | null;
+  source_row_index?: number | null;
   field_name?: string | null;
   old_value?: string | null;
   new_value?: string | null;
@@ -70,7 +81,7 @@ export interface AuditEntry {
   created_at: string;
 }
 
-export interface ExportJobSummary {
+export interface ExportSummary {
   job_id: string;
   total_rows_imported: number;
   rows_cleaned: number;
@@ -81,22 +92,25 @@ export interface ExportJobSummary {
   last_updated: string;
 }
 
-export interface UploadResponse {
+export interface JobPreview {
   job_id: string;
-  uploaded_file: UploadedFile;
-  summary: ExportJobSummary;
-  column_detection: {
-    mapping: Record<string, string>;
-    unmapped_headers: string[];
-  };
+  source_headers: string[];
+  column_mapping: Record<string, string>;
+  preview_rows: Record<string, unknown>[];
+}
+
+export interface UploadResponse {
+  job: UploadJob;
+  summary: ExportSummary;
+  preview: JobPreview;
 }
 
 export interface JobRecord {
-  id: string;
+  job_id: string;
   file_name: string;
   uploaded_at: string;
   row_count: number;
-  summary: ExportJobSummary;
+  summary: ExportSummary;
   last_export_at?: string | null;
 }
 

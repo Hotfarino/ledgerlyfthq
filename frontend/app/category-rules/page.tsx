@@ -116,8 +116,8 @@ export default function CategoryRulesPage() {
               >
                 <option value="payee">Payee</option>
                 <option value="description">Description</option>
-                <option value="memo">Memo</option>
-                <option value="vendor">Vendor</option>
+                <option value="notes">Notes</option>
+                <option value="account">Account</option>
               </select>
             </label>
 
@@ -244,13 +244,13 @@ export default function CategoryRulesPage() {
                 </thead>
                 <tbody>
                   {suggestions.map((row) => (
-                    <tr key={`${row.row_index}-${row.transaction_id}`}>
-                      <td>{row.row_index + 1}</td>
+                    <tr key={row.row_id}>
+                      <td>{row.source_row_index + 1}</td>
                       <td>
-                        <div>{String(row.cleaned_values.payee || "")}</div>
-                        <div className="text-xs text-muted">{String(row.cleaned_values.description || "")}</div>
+                        <div>{row.payee || "-"}</div>
+                        <div className="text-xs text-muted">{row.description || "-"}</div>
                       </td>
-                      <td>{String(row.cleaned_values.category || "") || "-"}</td>
+                      <td>{row.category || "-"}</td>
                       <td>{row.category_suggestion || "-"}</td>
                       <td>{row.category_confidence || "-"}</td>
                     </tr>

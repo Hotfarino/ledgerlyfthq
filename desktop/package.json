@@ -1,8 +1,8 @@
 {
-  "name": "ledgerlift-desktop",
+  "name": "ledgerlyfthq-desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "LedgerLift local desktop shell",
+  "description": "ledgerlyftHQ local desktop shell",
   "main": "main.js",
   "scripts": {
     "dev": "electron .",
@@ -17,8 +17,8 @@
     "wait-on": "8.0.3"
   },
   "build": {
-    "appId": "com.ledgerlift.desktop",
-    "productName": "LedgerLift",
+    "appId": "com.ledgerlyfthq.desktop",
+    "productName": "ledgerlyftHQ",
     "files": [
       "main.js",
       "preload.js"

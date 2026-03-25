@@ -19,25 +19,33 @@ class ReviewStatus(str, Enum):
     APPROVED = "approved"
 
 
-class UploadedFile(BaseModel):
-    id: str
+class UploadJob(BaseModel):
     job_id: str
     file_name: str
     file_type: str
     file_path: str
     uploaded_at: datetime
     row_count: int
+    source_headers: List[str] = Field(default_factory=list)
     column_mapping: Dict[str, str] = Field(default_factory=dict)
 
 
 class TransactionRow(BaseModel):
+    row_id: str
     job_id: str
-    row_index: int
-    transaction_id: Optional[str] = None
-    original_values: Dict[str, Any] = Field(default_factory=dict)
-    cleaned_values: Dict[str, Any] = Field(default_factory=dict)
+    source_row_index: int
+    date: Optional[str] = ""
+    description: Optional[str] = ""
+    payee: Optional[str] = ""
+    amount: Optional[float] = None
+    debit: Optional[float] = None
+    credit: Optional[float] = None
+    category: Optional[str] = ""
+    account: Optional[str] = ""
+    notes: Optional[str] = ""
     flags: List[str] = Field(default_factory=list)
-    notes: Optional[str] = None
+    cleaned_values: Dict[str, Any] = Field(default_factory=dict)
+    original_values: Dict[str, Any] = Field(default_factory=dict)
     review_status: ReviewStatus = ReviewStatus.PENDING
     category_suggestion: Optional[str] = None
     category_confidence: Optional[ConfidenceLevel] = None
@@ -46,7 +54,8 @@ class TransactionRow(BaseModel):
 class ExceptionFlag(BaseModel):
     id: str
     job_id: str
-    row_index: int
+    row_id: str
+    source_row_index: int
     flag_type: str
     severity: str
     message: str
@@ -57,7 +66,8 @@ class ExceptionFlag(BaseModel):
 class DuplicateGroup(BaseModel):
     id: str
     job_id: str
-    row_indices: List[int] = Field(default_factory=list)
+    row_ids: List[str] = Field(default_factory=list)
+    source_row_indexes: List[int] = Field(default_factory=list)
     confidence: ConfidenceLevel
     match_type: str
     reason: str
@@ -79,7 +89,8 @@ class CategoryRule(BaseModel):
 class AuditEntry(BaseModel):
     id: str
     job_id: str
-    row_index: Optional[int] = None
+    row_id: Optional[str] = None
+    source_row_index: Optional[int] = None
     field_name: Optional[str] = None
     old_value: Optional[str] = None
     new_value: Optional[str] = None
@@ -88,7 +99,7 @@ class AuditEntry(BaseModel):
     created_at: datetime
 
 
-class ExportJobSummary(BaseModel):
+class ExportSummary(BaseModel):
     job_id: str
     total_rows_imported: int
     rows_cleaned: int
@@ -99,16 +110,21 @@ class ExportJobSummary(BaseModel):
     last_updated: datetime
 
 
-class ColumnDetectionResult(BaseModel):
-    mapping: Dict[str, str] = Field(default_factory=dict)
-    unmapped_headers: List[str] = Field(default_factory=list)
+class JobPreview(BaseModel):
+    job_id: str
+    source_headers: List[str] = Field(default_factory=list)
+    column_mapping: Dict[str, str] = Field(default_factory=dict)
+    preview_rows: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class UploadResponse(BaseModel):
-    job_id: str
-    uploaded_file: UploadedFile
-    summary: ExportJobSummary
-    column_detection: ColumnDetectionResult
+    job: UploadJob
+    summary: ExportSummary
+    preview: JobPreview
+
+
+class JobsResponse(BaseModel):
+    jobs: List[Dict[str, Any]]
 
 
 class ApplyCleanupRequest(BaseModel):

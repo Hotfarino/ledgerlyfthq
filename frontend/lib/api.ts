@@ -4,19 +4,20 @@ import {
   DashboardMetrics,
   DuplicateGroup,
   ExceptionFlag,
-  ExportJobSummary,
+  ExportSummary,
+  JobPreview,
   JobRecord,
   TransactionRow,
   UploadResponse
 } from "@/lib/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(init?.headers || {})
     },
     cache: "no-store"
@@ -49,27 +50,18 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}/upload`, {
+  return request<UploadResponse>("/upload", {
     method: "POST",
     body: formData
   });
-
-  if (!res.ok) {
-    let message = `Upload failed (${res.status})`;
-    try {
-      const payload = await res.json();
-      message = payload.detail || message;
-    } catch {
-      // no-op
-    }
-    throw new Error(message);
-  }
-
-  return res.json() as Promise<UploadResponse>;
 }
 
-export async function fetchSummary(jobId: string): Promise<ExportJobSummary> {
-  return request<ExportJobSummary>(`/jobs/${jobId}/summary`);
+export async function fetchJobPreview(jobId: string): Promise<JobPreview> {
+  return request<JobPreview>(`/jobs/${jobId}/preview`);
+}
+
+export async function fetchSummary(jobId: string): Promise<ExportSummary> {
+  return request<ExportSummary>(`/jobs/${jobId}/summary`);
 }
 
 export async function fetchRows(
@@ -80,8 +72,8 @@ export async function fetchRows(
   if (filters?.search) query.set("search", filters.search);
   if (filters?.category) query.set("category", filters.category);
   if (filters?.flag) query.set("flag", filters.flag);
-  const suffix = query.toString() ? `?${query.toString()}` : "";
 
+  const suffix = query.toString() ? `?${query.toString()}` : "";
   const payload = await request<{ job_id: string; rows: TransactionRow[] }>(`/jobs/${jobId}/rows${suffix}`);
   return payload.rows;
 }
@@ -106,16 +98,16 @@ export async function fetchAuditLog(jobId: string): Promise<AuditEntry[]> {
   return payload.entries;
 }
 
-export async function applyCleanup(jobId: string, columnMapping: Record<string, string>): Promise<ExportJobSummary> {
-  const payload = await request<{ job_id: string; summary: ExportJobSummary }>(`/jobs/${jobId}/apply-cleanup`, {
+export async function applyCleanup(jobId: string, columnMapping: Record<string, string>): Promise<ExportSummary> {
+  const payload = await request<{ job_id: string; summary: ExportSummary }>(`/jobs/${jobId}/apply-cleanup`, {
     method: "POST",
     body: JSON.stringify({ column_mapping: columnMapping })
   });
   return payload.summary;
 }
 
-export async function applyCategoryRules(jobId: string, previewOnly = false): Promise<ExportJobSummary> {
-  const payload = await request<{ job_id: string; summary: ExportJobSummary }>(`/jobs/${jobId}/apply-category-rules`, {
+export async function applyCategoryRules(jobId: string, previewOnly = false): Promise<ExportSummary> {
+  const payload = await request<{ job_id: string; summary: ExportSummary }>(`/jobs/${jobId}/apply-category-rules`, {
     method: "POST",
     body: JSON.stringify({ preview_only: previewOnly })
   });
@@ -155,7 +147,11 @@ export async function createCategoryRule(payload: {
   });
 }
 
-export function getExportUrl(jobId: string, kind: "cleaned" | "exceptions" | "duplicates" | "summary", fileType?: "csv" | "xlsx"): string {
+export function getExportUrl(
+  jobId: string,
+  kind: "cleaned" | "exceptions" | "duplicates" | "summary",
+  fileType?: "csv" | "xlsx"
+): string {
   if (kind === "cleaned") {
     const query = fileType ? `?file_type=${fileType}` : "";
     return `${API_BASE}/jobs/${jobId}/export/cleaned${query}`;

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -14,10 +13,10 @@ from models.schemas import (
     AuditResponse,
     CategoryRule,
     CategoryRuleCreateRequest,
-    ColumnDetectionResult,
     DuplicatesResponse,
     ExceptionsResponse,
     JobRowsResponse,
+    JobsResponse,
     MarkReviewedRequest,
     SuggestionsResponse,
     UploadResponse,
@@ -30,31 +29,32 @@ router = APIRouter()
 
 @router.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "LedgerLift API"}
+    return {"status": "ok", "service": "ledgerlyftHQ API"}
 
 
-@router.get("/jobs")
-def list_jobs() -> dict[str, list[dict]]:
-    return {"jobs": repository.list_jobs()}
+@router.get("/jobs", response_model=JobsResponse)
+def list_jobs() -> JobsResponse:
+    return JobsResponse(jobs=repository.list_jobs())
 
 
 @router.get("/dashboard/metrics")
 def dashboard_metrics() -> dict[str, int | str | None]:
     jobs = repository.list_jobs()
-    files_imported = len(jobs)
-    rows_processed = sum(int(job["row_count"]) for job in jobs)
 
+    files_imported = len(jobs)
+    rows_processed = sum(int(job.get("row_count", 0)) for job in jobs)
     duplicates = 0
     exceptions = 0
     uncategorized = 0
-    last_export = None
+    last_export_time = None
+
     for job in jobs:
         summary = job.get("summary", {})
         duplicates += int(summary.get("suspected_duplicates_count", 0))
         exceptions += int(summary.get("rows_flagged", 0))
         uncategorized += int(summary.get("uncategorized_count", 0))
-        if job.get("last_export_at") and (not last_export or job["last_export_at"] > last_export):
-            last_export = job["last_export_at"]
+        if job.get("last_export_at") and (not last_export_time or job["last_export_at"] > last_export_time):
+            last_export_time = job["last_export_at"]
 
     return {
         "files_imported": files_imported,
@@ -62,26 +62,35 @@ def dashboard_metrics() -> dict[str, int | str | None]:
         "duplicates_flagged": duplicates,
         "exceptions_flagged": exceptions,
         "uncategorized_transactions": uncategorized,
-        "last_export_time": last_export,
+        "last_export_time": last_export_time,
     }
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload(file: UploadFile = File(...)):
+async def upload(file: UploadFile = File(...)) -> UploadResponse:
     if not file.filename:
         raise HTTPException(status_code=400, detail="File name is required")
 
     suffix = Path(file.filename).suffix.lower()
     if suffix not in {".csv", ".xlsx", ".xlsm", ".xltx", ".xltm"}:
-        raise HTTPException(status_code=400, detail="Only CSV and XLSX files are supported")
+        raise HTTPException(status_code=400, detail="Only CSV and XLSX files are supported in V1")
 
-    job_id, uploaded_file, summary, mapping, unmapped = await job_service.handle_upload(file)
-    return UploadResponse(
-        job_id=job_id,
-        uploaded_file=uploaded_file,
-        summary=summary,
-        column_detection=ColumnDetectionResult(mapping=mapping, unmapped_headers=unmapped),
-    )
+    try:
+        upload_job, summary, preview = await job_service.handle_upload(file)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=500, detail=f"Upload processing failed: {exc}") from exc
+
+    return UploadResponse(job=upload_job, summary=summary, preview=preview)
+
+
+@router.get("/jobs/{job_id}/preview")
+def get_preview(job_id: str):
+    preview = repository.get_preview(job_id)
+    if not preview:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return preview
 
 
 @router.get("/jobs/{job_id}/summary")
@@ -109,14 +118,14 @@ def get_rows(
         filtered = [
             row
             for row in filtered
-            if needle in str(row.cleaned_values.get("payee", "")).lower()
-            or needle in str(row.cleaned_values.get("description", "")).lower()
-            or needle in str(row.cleaned_values.get("date", "")).lower()
-            or needle in str(row.cleaned_values.get("category", "")).lower()
-            or needle in str(row.cleaned_values.get("signed_amount", "")).lower()
+            if needle in (row.payee or "").lower()
+            or needle in (row.description or "").lower()
+            or needle in (row.date or "").lower()
+            or needle in (row.category or "").lower()
+            or needle in str(row.amount or "")
         ]
     if category:
-        filtered = [row for row in filtered if str(row.cleaned_values.get("category", "")).lower() == category.lower()]
+        filtered = [row for row in filtered if (row.category or "").lower() == category.lower()]
     if flag:
         filtered = [row for row in filtered if flag in row.flags]
 
@@ -124,21 +133,21 @@ def get_rows(
 
 
 @router.get("/jobs/{job_id}/exceptions", response_model=ExceptionsResponse)
-def get_exceptions(job_id: str):
+def get_exceptions(job_id: str) -> ExceptionsResponse:
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
     return ExceptionsResponse(job_id=job_id, exceptions=repository.list_exceptions(job_id))
 
 
 @router.get("/jobs/{job_id}/duplicates", response_model=DuplicatesResponse)
-def get_duplicates(job_id: str):
+def get_duplicates(job_id: str) -> DuplicatesResponse:
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
     return DuplicatesResponse(job_id=job_id, duplicates=repository.list_duplicates(job_id))
 
 
 @router.get("/jobs/{job_id}/suggestions", response_model=SuggestionsResponse)
-def get_suggestions(job_id: str):
+def get_suggestions(job_id: str) -> SuggestionsResponse:
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -165,16 +174,16 @@ def apply_category_rules(job_id: str, payload: ApplyCategoryRulesRequest):
 @router.post("/jobs/{job_id}/mark-reviewed")
 def mark_reviewed(job_id: str, payload: MarkReviewedRequest):
     if payload.target not in {"rows", "exceptions", "duplicates"}:
-        raise HTTPException(status_code=400, detail="target must be rows, exceptions, or duplicates")
+        raise HTTPException(status_code=400, detail="target must be one of rows, exceptions, duplicates")
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
 
-    count = repository.mark_reviewed(job_id, payload.target, payload.ids, payload.review_status)
-    return {"job_id": job_id, "target": payload.target, "updated": count}
+    updated = repository.mark_reviewed(job_id, payload.target, payload.ids, payload.review_status)
+    return {"job_id": job_id, "target": payload.target, "updated": updated}
 
 
 @router.get("/jobs/{job_id}/audit-log", response_model=AuditResponse)
-def get_audit_log(job_id: str):
+def get_audit_log(job_id: str) -> AuditResponse:
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
     return AuditResponse(job_id=job_id, entries=repository.list_audit_entries(job_id))
@@ -188,14 +197,14 @@ def export_cleaned(job_id: str, file_type: str = Query(default="csv")):
         raise HTTPException(status_code=404, detail="Job not found")
 
     path = export_service.export_cleaned(job_id, file_type=file_type)
-    return FileResponse(path=path, filename=path.name, media_type="application/octet-stream")
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if file_type == "xlsx" else "text/csv"
+    return FileResponse(path=path, filename=path.name, media_type=media_type)
 
 
 @router.get("/jobs/{job_id}/export/exceptions")
 def export_exceptions(job_id: str):
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-
     path = export_service.export_exceptions(job_id)
     return FileResponse(path=path, filename=path.name, media_type="text/csv")
 
@@ -204,7 +213,6 @@ def export_exceptions(job_id: str):
 def export_duplicates(job_id: str):
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-
     path = export_service.export_duplicates(job_id)
     return FileResponse(path=path, filename=path.name, media_type="text/csv")
 
@@ -213,7 +221,6 @@ def export_duplicates(job_id: str):
 def export_summary(job_id: str):
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-
     path = export_service.export_summary(job_id)
     return FileResponse(path=path, filename=path.name, media_type="text/csv")
 
@@ -225,7 +232,7 @@ def list_category_rules():
 
 @router.post("/category-rules", response_model=CategoryRule)
 def create_category_rule(payload: CategoryRuleCreateRequest):
-    rule = job_service.create_category_rule(
+    return job_service.create_category_rule(
         name=payload.name,
         target_field=payload.target_field,
         contains_text=payload.contains_text,
@@ -233,4 +240,3 @@ def create_category_rule(payload: CategoryRuleCreateRequest):
         confidence=payload.confidence,
         active=payload.active,
     )
-    return rule

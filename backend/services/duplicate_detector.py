@@ -10,59 +10,58 @@ from services.normalizer import text_similarity
 
 def detect_duplicates(job_id: str, rows: List[TransactionRow]) -> List[DuplicateGroup]:
     groups: List[DuplicateGroup] = []
-    used_rows: set[int] = set()
+    used_row_ids: set[str] = set()
 
     exact_map = defaultdict(list)
     for row in rows:
-        date = row.cleaned_values.get("date", "")
-        amount = row.cleaned_values.get("signed_amount", "")
-        desc = row.cleaned_values.get("description", "")
-        payee = row.cleaned_values.get("payee", "")
-        key = (date, amount, desc.lower(), payee.lower())
+        key = (
+            row.date or "",
+            row.amount,
+            (row.payee or "").lower(),
+            (row.description or "").lower(),
+        )
         exact_map[key].append(row)
 
-    for grouped_rows in exact_map.values():
-        if len(grouped_rows) > 1:
-            indices = [r.row_index for r in grouped_rows]
-            groups.append(
-                DuplicateGroup(
-                    id=str(uuid.uuid4()),
-                    job_id=job_id,
-                    row_indices=indices,
-                    confidence=ConfidenceLevel.HIGH,
-                    match_type="exact",
-                    reason="Rows share date, amount, payee, and description.",
-                )
+    for candidate_rows in exact_map.values():
+        if len(candidate_rows) <= 1:
+            continue
+
+        row_ids = [item.row_id for item in candidate_rows]
+        source_indexes = [item.source_row_index for item in candidate_rows]
+        groups.append(
+            DuplicateGroup(
+                id=str(uuid.uuid4()),
+                job_id=job_id,
+                row_ids=row_ids,
+                source_row_indexes=source_indexes,
+                confidence=ConfidenceLevel.HIGH,
+                match_type="exact",
+                reason="Rows share date, amount, payee, and description.",
             )
-            used_rows.update(indices)
+        )
+        used_row_ids.update(row_ids)
 
-    candidate_rows = [r for r in rows if r.row_index not in used_rows]
-    for idx, left in enumerate(candidate_rows):
-        for right in candidate_rows[idx + 1 :]:
-            if left.row_index in used_rows or right.row_index in used_rows:
+    candidates = [row for row in rows if row.row_id not in used_row_ids]
+    for index, left in enumerate(candidates):
+        for right in candidates[index + 1 :]:
+            if left.row_id in used_row_ids or right.row_id in used_row_ids:
+                continue
+            if not left.date or left.date != right.date:
+                continue
+            if left.amount is None or right.amount is None:
+                continue
+            if abs(left.amount - right.amount) > 0.01:
                 continue
 
-            left_date = left.cleaned_values.get("date", "")
-            right_date = right.cleaned_values.get("date", "")
-            if not left_date or left_date != right_date:
-                continue
-
-            left_amount = left.cleaned_values.get("signed_amount")
-            right_amount = right.cleaned_values.get("signed_amount")
-            if left_amount == "" or right_amount == "":
-                continue
-            if abs(float(left_amount) - float(right_amount)) > 0.01:
-                continue
-
-            left_text = f"{left.cleaned_values.get('payee', '')} {left.cleaned_values.get('description', '')}".strip()
-            right_text = f"{right.cleaned_values.get('payee', '')} {right.cleaned_values.get('description', '')}".strip()
+            left_text = f"{left.payee or ''} {left.description or ''}".strip()
+            right_text = f"{right.payee or ''} {right.description or ''}".strip()
             similarity = text_similarity(left_text, right_text)
 
             if similarity >= 0.9:
                 confidence = ConfidenceLevel.HIGH
             elif similarity >= 0.75:
                 confidence = ConfidenceLevel.MEDIUM
-            elif similarity >= 0.6:
+            elif similarity >= 0.65:
                 confidence = ConfidenceLevel.LOW
             else:
                 continue
@@ -71,12 +70,13 @@ def detect_duplicates(job_id: str, rows: List[TransactionRow]) -> List[Duplicate
                 DuplicateGroup(
                     id=str(uuid.uuid4()),
                     job_id=job_id,
-                    row_indices=[left.row_index, right.row_index],
+                    row_ids=[left.row_id, right.row_id],
+                    source_row_indexes=[left.source_row_index, right.source_row_index],
                     confidence=confidence,
-                    match_type="near",
-                    reason=f"Near duplicate match on same day and amount (similarity={similarity:.2f}).",
+                    match_type="likely",
+                    reason=f"Likely duplicate on same date/amount (text similarity {similarity:.2f}).",
                 )
             )
-            used_rows.update({left.row_index, right.row_index})
+            used_row_ids.update({left.row_id, right.row_id})
 
     return groups

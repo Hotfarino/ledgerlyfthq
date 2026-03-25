@@ -15,7 +15,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LedgerLift",
+  title: "ledgerlyftHQ",
   description: "Local-first bookkeeping cleanup support tool"
 };
 

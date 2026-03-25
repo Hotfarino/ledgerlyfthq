@@ -1,7 +1,7 @@
 [project]
-name = "ledgerlift-backend"
+name = "ledgerlyfthq-backend"
 version = "0.1.0"
-description = "LedgerLift local-first bookkeeping cleanup API"
+description = "ledgerlyftHQ local-first bookkeeping cleanup API"
 requires-python = ">=3.10"
 
 [tool.uvicorn]

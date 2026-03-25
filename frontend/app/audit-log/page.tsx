@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
+
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
@@ -23,6 +24,7 @@ export default function AuditLogPage() {
       setEntries([]);
       return;
     }
+
     setLoading(true);
     fetchAuditLog(jobId)
       .then((results) => {
@@ -37,14 +39,14 @@ export default function AuditLogPage() {
     <div>
       <PageTitle
         title="Audit Log"
-        subtitle="Row-level change history and workflow events for traceability."
+        subtitle="Before/after field changes and processing events for traceability."
         actions={<JobPicker />}
       />
 
       <SectionCard title="Audit Entries">
         {error ? <p className="mb-3 text-sm text-bad">{error}</p> : null}
         {!jobId ? (
-          <EmptyState text="Select a job to view its audit trail." />
+          <EmptyState text="Select a job to view audit entries." />
         ) : loading ? (
           <p className="text-sm text-muted">Loading audit entries...</p>
         ) : entries.length === 0 ? (
@@ -56,7 +58,8 @@ export default function AuditLogPage() {
                 <tr>
                   <th>Time</th>
                   <th>Action</th>
-                  <th>Row</th>
+                  <th>Source Row</th>
+                  <th>Row ID</th>
                   <th>Field</th>
                   <th>Change</th>
                   <th>Note</th>
@@ -67,10 +70,17 @@ export default function AuditLogPage() {
                   <tr key={entry.id}>
                     <td>{new Date(entry.created_at).toLocaleString()}</td>
                     <td>{entry.action}</td>
-                    <td>{entry.row_index !== null && entry.row_index !== undefined ? entry.row_index + 1 : "-"}</td>
+                    <td>
+                      {entry.source_row_index !== null && entry.source_row_index !== undefined
+                        ? entry.source_row_index + 1
+                        : "-"}
+                    </td>
+                    <td className="font-mono text-xs">{entry.row_id || "-"}</td>
                     <td>{entry.field_name || "-"}</td>
                     <td className="text-xs">
-                      {entry.old_value !== null && entry.old_value !== undefined ? `"${entry.old_value}" -> "${entry.new_value || ""}"` : "-"}
+                      {entry.old_value !== null && entry.old_value !== undefined
+                        ? `"${entry.old_value}" -> "${entry.new_value || ""}"`
+                        : "-"}
                     </td>
                     <td>{entry.note || "-"}</td>
                   </tr>

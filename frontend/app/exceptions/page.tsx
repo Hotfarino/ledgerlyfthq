@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
+
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
@@ -44,7 +45,7 @@ export default function ExceptionsPage() {
   );
 
   async function markAllReviewed() {
-    if (!jobId) return;
+    if (!jobId || filtered.length === 0) return;
     await markReviewed(jobId, "exceptions", filtered.map((item) => item.id));
     await load();
   }
@@ -53,7 +54,7 @@ export default function ExceptionsPage() {
     <div>
       <PageTitle
         title="Exceptions"
-        subtitle="Rows requiring human review due to missing, malformed, or inconsistent signals."
+        subtitle="Rows requiring manual review due to missing or malformed values."
         actions={<JobPicker />}
       />
 
@@ -104,7 +105,8 @@ export default function ExceptionsPage() {
                   <tr>
                     <th>Severity</th>
                     <th>Flag</th>
-                    <th>Row</th>
+                    <th>Source Row</th>
+                    <th>Row ID</th>
                     <th>Message</th>
                     <th>Reviewed</th>
                   </tr>
@@ -114,7 +116,8 @@ export default function ExceptionsPage() {
                     <tr key={item.id}>
                       <td>{item.severity}</td>
                       <td>{item.flag_type}</td>
-                      <td>{item.row_index + 1}</td>
+                      <td>{item.source_row_index + 1}</td>
+                      <td className="font-mono text-xs">{item.row_id}</td>
                       <td>{item.message}</td>
                       <td>{item.reviewed ? "yes" : "no"}</td>
                     </tr>

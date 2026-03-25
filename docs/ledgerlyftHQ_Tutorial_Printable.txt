@@ -1,16 +1,16 @@
-LedgerLift Tutorial (Phase 1)
+ledgerlyftHQ Tutorial (Phase 1)
 Printable Reference
 
-1) What LedgerLift Is
-LedgerLift is a local bookkeeping cleanup assistant. It helps you import messy CSV/XLSX data,
+1) What ledgerlyftHQ Is
+ledgerlyftHQ is a local bookkeeping cleanup assistant. It helps you import messy CSV/XLSX data,
 normalize fields, flag exceptions, review suspected duplicates, suggest categories, and export
 cleaned/review files.
 
-Important: LedgerLift does NOT replace accounting judgment. You make final decisions.
+Important: ledgerlyftHQ does NOT replace accounting judgment. You make final decisions.
 
 2) Core Definitions
 - Imported Data: Raw rows from your source file.
-- Cleaned Data: Standardized values LedgerLift generates.
+- Cleaned Data: Standardized values ledgerlyftHQ generates.
 - Exception: A row with warning/error requiring human review.
 - Duplicate Group: Transactions suspected to represent the same event.
 - Category Rule: "if contains" rule that suggests a category.
@@ -58,9 +58,9 @@ E. Handle Duplicates
 2. Filter by confidence.
 3. Review grouped row indices and reasons.
 4. Decide what to keep in your accounting workflow.
-5. Mark reviewed in LedgerLift.
+5. Mark reviewed in ledgerlyftHQ.
 
-Important: LedgerLift never auto-deletes duplicates.
+Important: ledgerlyftHQ never auto-deletes duplicates.
 
 F. Category Suggestions
 1. Open Category Rules.
@@ -89,27 +89,27 @@ H. Audit
 
 Case 1: Split debit/credit bank CSV
 - Input: Withdrawal + Deposit, no unified amount.
-- LedgerLift: Builds signed amount and flags ambiguous sign cases.
+- ledgerlyftHQ: Builds signed amount and flags ambiguous sign cases.
 - Human decision: Final sign/account interpretation.
 
 Case 2: Duplicate transactions from overlapping exports
 - Input: Same transactions imported multiple times.
-- LedgerLift: Groups exact/near duplicates with confidence.
+- ledgerlyftHQ: Groups exact/near duplicates with confidence.
 - Human decision: Keep/remove in final accounting process.
 
 Case 3: Many uncategorized transactions
 - Input: Blank category fields.
-- LedgerLift: Suggests categories from custom rules.
+- ledgerlyftHQ: Suggests categories from custom rules.
 - Human decision: Accept/override suggestions.
 
 Case 4: Transfer-like cash movement
 - Input: Same date, equal opposite amounts.
-- LedgerLift: Flags possible transfer pairs.
+- ledgerlyftHQ: Flags possible transfer pairs.
 - Human decision: Confirm true transfer vs unrelated entries.
 
 Case 5: Messy text and date formats
 - Input: Inconsistent casing, whitespace, mixed date formats.
-- LedgerLift: Standardizes values and logs before/after changes.
+- ledgerlyftHQ: Standardizes values and logs before/after changes.
 - Human decision: Final bookkeeping standard.
 
 5) Confidence and Review Guidance
@@ -127,7 +127,7 @@ Do not finalize accounting import until Exceptions and Duplicates are reviewed.
 4. Confirm Audit Log entries.
 5. Re-export.
 
-LedgerLift Phase 1 Boundary
+ledgerlyftHQ Phase 1 Boundary
 - Local-first only.
 - No live QuickBooks integration in Phase 1.
 - Human accounting judgment remains required.

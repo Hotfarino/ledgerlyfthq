@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import router
 
 app = FastAPI(
-    title="LedgerLift API",
+    title="ledgerlyftHQ API",
     version="0.1.0",
     description="Local-first bookkeeping cleanup workflow API.",
 )

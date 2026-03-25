@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from fastapi import UploadFile
 
@@ -11,11 +11,13 @@ from app.config import UPLOAD_DIR
 from models.schemas import (
     AuditEntry,
     CategoryRule,
-    ExportJobSummary,
+    ExportSummary,
+    JobPreview,
     TransactionRow,
-    UploadedFile,
+    UploadJob,
 )
 from parsers.file_parser import (
+    build_preview_rows,
     dataframe_from_raw_json,
     dataframe_to_raw_json,
     detect_column_mapping,
@@ -32,10 +34,10 @@ class JobService:
     def __init__(self) -> None:
         repository.ensure_default_rules()
 
-    def _build_summary(self, job_id: str, rows: List[TransactionRow], duplicate_count: int) -> ExportJobSummary:
+    def _build_summary(self, job_id: str, rows: List[TransactionRow], duplicate_count: int) -> ExportSummary:
         rows_flagged = sum(1 for row in rows if row.flags)
         uncategorized = sum(1 for row in rows if "uncategorized_transaction" in row.flags)
-        return ExportJobSummary(
+        return ExportSummary(
             job_id=job_id,
             total_rows_imported=len(rows),
             rows_cleaned=len(rows),
@@ -45,51 +47,65 @@ class JobService:
             last_updated=datetime.utcnow(),
         )
 
-    async def handle_upload(self, file: UploadFile) -> tuple[str, UploadedFile, ExportJobSummary, dict[str, str], list[str]]:
+    async def handle_upload(self, file: UploadFile) -> tuple[UploadJob, ExportSummary, JobPreview]:
         job_id = str(uuid.uuid4())
-        suffix = Path(file.filename or "upload.csv").suffix.lower()
-        safe_name = f"{job_id}{suffix if suffix else '.csv'}"
-        output_path = UPLOAD_DIR / safe_name
-        output_path.write_bytes(await file.read())
+        suffix = Path(file.filename or "upload.csv").suffix.lower() or ".csv"
+        safe_file_name = f"{job_id}{suffix}"
+        output_path = UPLOAD_DIR / safe_file_name
+
+        content = await file.read()
+        if not content:
+            raise ValueError("Uploaded file is empty.")
+        output_path.write_bytes(content)
 
         df = load_dataframe(output_path)
-        mapping, unmapped = detect_column_mapping(df)
+        mapping, _ = detect_column_mapping(df)
+        preview_rows = build_preview_rows(df)
+        source_headers = [str(column) for column in df.columns]
 
-        uploaded = UploadedFile(
-            id=job_id,
+        upload_job = UploadJob(
             job_id=job_id,
-            file_name=file.filename or safe_name,
-            file_type=suffix or "csv",
+            file_name=file.filename or safe_file_name,
+            file_type=suffix,
             file_path=str(output_path),
             uploaded_at=datetime.utcnow(),
             row_count=len(df),
+            source_headers=source_headers,
             column_mapping=mapping,
         )
 
-        rows, summary = self._run_processing(job_id=job_id, df_json=dataframe_to_raw_json(df), mapping=mapping)
+        raw_df_json = dataframe_to_raw_json(df)
+        rows, summary = self._run_processing(job_id=job_id, raw_df_json=raw_df_json, mapping=mapping)
 
-        repository.create_job(uploaded_file=uploaded, raw_df_json=dataframe_to_raw_json(df), summary=summary)
-        repository.replace_rows(job_id, rows)
+        repository.create_job(upload_job=upload_job, preview_rows=preview_rows, raw_df_json=raw_df_json, summary=summary)
+        repository.replace_rows(job_id=job_id, rows=rows)
 
-        return job_id, uploaded, summary, mapping, unmapped
+        preview = JobPreview(
+            job_id=job_id,
+            source_headers=source_headers,
+            column_mapping=mapping,
+            preview_rows=preview_rows,
+        )
+        return upload_job, summary, preview
 
-    def _run_processing(self, job_id: str, df_json: str, mapping: Dict[str, str]) -> tuple[List[TransactionRow], ExportJobSummary]:
-        df = dataframe_from_raw_json(df_json)
+    def _run_processing(self, job_id: str, raw_df_json: str, mapping: Dict[str, str]) -> tuple[List[TransactionRow], ExportSummary]:
+        df = dataframe_from_raw_json(raw_df_json)
         normalized = normalize_rows(job_id=job_id, df=df, mapping=mapping)
 
         rules = repository.list_category_rules()
         rows = apply_category_rules(normalized.rows, rules=rules, preview_only=True)
 
         duplicates = detect_duplicates(job_id=job_id, rows=rows)
-        duplicate_indices = {idx for group in duplicates for idx in group.row_indices}
-        exceptions = build_exceptions(job_id=job_id, rows=rows, duplicate_row_indices=duplicate_indices)
+        duplicate_row_ids = {row_id for group in duplicates for row_id in group.row_ids}
+        exceptions = build_exceptions(job_id=job_id, rows=rows, duplicate_row_ids=duplicate_row_ids)
         summary = self._build_summary(job_id, rows, duplicate_count=len(duplicates))
 
         audit_entries: List[AuditEntry] = [
             AuditEntry(
                 id=str(uuid.uuid4()),
                 job_id=job_id,
-                row_index=entry["row_index"],
+                row_id=entry["row_id"],
+                source_row_index=entry["source_row_index"],
                 field_name=entry["field_name"],
                 old_value=entry["old_value"],
                 new_value=entry["new_value"],
@@ -99,13 +115,12 @@ class JobService:
             )
             for entry in normalized.audit_entries
         ]
-
         audit_entries.append(
             AuditEntry(
                 id=str(uuid.uuid4()),
                 job_id=job_id,
                 action="pipeline_run",
-                note="Normalization, duplicate detection, and exception scan completed.",
+                note="Normalization, exception scan, and duplicate detection completed.",
                 created_at=datetime.utcnow(),
             )
         )
@@ -117,42 +132,43 @@ class JobService:
 
         return rows, summary
 
-    def rerun_cleanup(self, job_id: str, column_mapping: Dict[str, str]) -> ExportJobSummary:
+    def rerun_cleanup(self, job_id: str, column_mapping: Dict[str, str]) -> ExportSummary:
         job = repository.get_job(job_id)
         if not job:
             raise ValueError("Job not found")
 
         mapping = column_mapping or job["column_mapping"]
-        rows, summary = self._run_processing(job_id=job_id, df_json=job["raw_df_json"], mapping=mapping)
-        repository.replace_rows(job_id, rows)
-        repository.update_job(job_id=job_id, column_mapping=mapping, summary=summary)
+        rows, summary = self._run_processing(job_id=job_id, raw_df_json=job["raw_df_json"], mapping=mapping)
 
+        repository.replace_rows(job_id=job_id, rows=rows)
+        repository.update_job(job_id=job_id, column_mapping=mapping, summary=summary)
         repository.add_audit_entries(
             [
                 AuditEntry(
                     id=str(uuid.uuid4()),
                     job_id=job_id,
                     action="cleanup_rerun",
-                    note="Cleanup rerun with updated column mapping.",
+                    note="Cleanup re-run with updated column mapping.",
                     created_at=datetime.utcnow(),
                 )
             ]
         )
+
         return summary
 
-    def apply_category_rules(self, job_id: str, preview_only: bool = False) -> ExportJobSummary:
+    def apply_category_rules(self, job_id: str, preview_only: bool = False) -> ExportSummary:
         rows = repository.list_rows(job_id)
         if not rows:
             raise ValueError("Job not found or no rows available")
 
         rules = repository.list_category_rules()
-        updated_rows = apply_category_rules(rows, rules, preview_only=preview_only)
-        repository.replace_rows(job_id, updated_rows)
+        updated_rows = apply_category_rules(rows=rows, rules=rules, preview_only=preview_only)
+        repository.replace_rows(job_id=job_id, rows=updated_rows)
 
-        duplicates = repository.list_duplicates(job_id)
-        summary = self._build_summary(job_id, updated_rows, duplicate_count=len(duplicates))
-        repository.update_job(job_id=job_id, column_mapping=repository.get_job(job_id)["column_mapping"], summary=summary)
-
+        duplicate_count = len(repository.list_duplicates(job_id))
+        summary = self._build_summary(job_id, updated_rows, duplicate_count)
+        job = repository.get_job(job_id)
+        repository.update_job(job_id=job_id, column_mapping=job["column_mapping"], summary=summary)
         repository.add_audit_entries(
             [
                 AuditEntry(

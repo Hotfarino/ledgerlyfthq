@@ -3,7 +3,7 @@ CANONICAL_COLUMNS = [
     "description",
     "payee",
     "vendor",
-    "memo",
+    "notes",
     "amount",
     "debit",
     "credit",
@@ -18,7 +18,7 @@ COLUMN_ALIASES = {
     "description": ["description", "details", "narrative", "item description"],
     "payee": ["payee", "merchant", "counterparty", "name"],
     "vendor": ["vendor", "supplier"],
-    "memo": ["memo", "note", "notes", "reference"],
+    "notes": ["memo", "note", "notes", "reference"],
     "amount": ["amount", "value", "total", "transaction amount"],
     "debit": ["debit", "withdrawal", "outflow", "charge"],
     "credit": ["credit", "deposit", "inflow", "payment"],
@@ -28,4 +28,20 @@ COLUMN_ALIASES = {
     "transaction_id": ["transaction id", "txn id", "id", "reference id", "check #"],
 }
 
-REQUIRED_FIELDS = ["date", "amount", "description"]
+STANDARD_ROW_FIELDS = [
+    "row_id",
+    "source_row_index",
+    "date",
+    "description",
+    "payee",
+    "amount",
+    "debit",
+    "credit",
+    "category",
+    "account",
+    "notes",
+    "flags",
+    "cleaned_values",
+    "original_values",
+    "review_status",
+]

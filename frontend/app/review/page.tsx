@@ -21,7 +21,7 @@ export default function ReviewPage() {
   const [flagFilter, setFlagFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
 
   async function loadRows() {
     if (!jobId) return;
@@ -53,8 +53,8 @@ export default function ReviewPage() {
   }, [rows]);
 
   const selectedIds = Object.entries(selected)
-    .filter(([, value]) => value)
-    .map(([key]) => key);
+    .filter(([, isChecked]) => isChecked)
+    .map(([rowId]) => rowId);
 
   async function handleMarkReviewed() {
     if (!jobId || selectedIds.length === 0) return;
@@ -65,8 +65,8 @@ export default function ReviewPage() {
   return (
     <div>
       <PageTitle
-        title="Review Cleaned Data"
-        subtitle="Inspect cleaned rows with before/after values and review status before export."
+        title="Cleaned Data Review"
+        subtitle="Review cleaned rows, flags, and before/after values before export."
         actions={<JobPicker />}
       />
 
@@ -124,47 +124,47 @@ export default function ReviewPage() {
           {!jobId ? (
             <EmptyState text="Select a job to review rows." />
           ) : rows.length === 0 ? (
-            <EmptyState text="No rows returned for the current filters." />
+            <EmptyState text="No rows returned for current filters." />
           ) : (
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
                     <th />
-                    <th>Row</th>
+                    <th>Source Row</th>
                     <th>Date</th>
-                    <th>Payee/Description</th>
+                    <th>Payee / Description</th>
                     <th>Amount</th>
                     <th>Category</th>
                     <th>Flags</th>
                     <th>Review</th>
-                    <th>Before/After</th>
+                    <th>Before / After</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={`${row.row_index}-${row.transaction_id}`}>
+                    <tr key={row.row_id}>
                       <td>
                         <input
                           type="checkbox"
-                          checked={Boolean(selected[row.row_index])}
+                          checked={Boolean(selected[row.row_id])}
                           onChange={(event) =>
                             setSelected((prev) => ({
                               ...prev,
-                              [row.row_index]: event.target.checked
+                              [row.row_id]: event.target.checked
                             }))
                           }
                         />
                       </td>
-                      <td>{row.row_index + 1}</td>
-                      <td>{String(row.cleaned_values.date || "")}</td>
+                      <td>{row.source_row_index + 1}</td>
+                      <td>{row.date || "-"}</td>
                       <td>
-                        <div className="font-medium">{String(row.cleaned_values.payee || "")}</div>
-                        <div className="text-xs text-muted">{String(row.cleaned_values.description || "")}</div>
+                        <div className="font-medium">{row.payee || "-"}</div>
+                        <div className="text-xs text-muted">{row.description || "-"}</div>
                       </td>
-                      <td className="font-mono">{String(row.cleaned_values.signed_amount || "")}</td>
+                      <td className="font-mono">{row.amount ?? ""}</td>
                       <td>
-                        <div>{String(row.cleaned_values.category || "") || "-"}</div>
+                        <div>{row.category || "-"}</div>
                         {row.category_suggestion ? (
                           <div className="text-xs text-muted">
                             Suggestion: {row.category_suggestion} ({row.category_confidence})
@@ -174,14 +174,14 @@ export default function ReviewPage() {
                       <td>
                         <div className="flex flex-wrap gap-1">
                           {row.flags.map((flag) => (
-                            <FlagChip key={`${row.row_index}-${flag}`} value={flag} />
+                            <FlagChip key={`${row.row_id}-${flag}`} value={flag} />
                           ))}
                         </div>
                       </td>
                       <td>{row.review_status}</td>
                       <td className="text-xs text-muted">
                         <div>Orig: {String(row.original_values["Description"] || row.original_values["Details"] || "")}</div>
-                        <div>Clean: {String(row.cleaned_values.description || "")}</div>
+                        <div>Clean: {row.description || ""}</div>
                       </td>
                     </tr>
                   ))}

@@ -3,18 +3,19 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
+
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
 import { SectionCard } from "@/components/section-card";
 import { fetchSummary, getExportUrl } from "@/lib/api";
-import { ExportJobSummary } from "@/lib/types";
+import { ExportSummary } from "@/lib/types";
 import { useActiveJobId } from "@/lib/use-active-job";
 
 export default function ExportPage() {
   const [jobId] = useActiveJobId();
 
-  const [summary, setSummary] = useState<ExportJobSummary | null>(null);
+  const [summary, setSummary] = useState<ExportSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function ExportPage() {
       setSummary(null);
       return;
     }
+
     fetchSummary(jobId)
       .then((data) => {
         setSummary(data);
@@ -42,7 +44,7 @@ export default function ExportPage() {
     <div>
       <PageTitle
         title="Export"
-        subtitle="Download cleaned data, exception and duplicate review reports, plus summary metrics."
+        subtitle="Download cleaned data, exceptions, duplicates, and summary report files."
         actions={<JobPicker />}
       />
 
@@ -73,21 +75,21 @@ export default function ExportPage() {
                 className="rounded-lg border border-line bg-white px-4 py-3 text-left text-sm font-semibold"
                 onClick={() => download("exceptions")}
               >
-                Export Exception Report CSV
+                Export Exceptions CSV
               </button>
               <button
                 type="button"
                 className="rounded-lg border border-line bg-white px-4 py-3 text-left text-sm font-semibold"
                 onClick={() => download("duplicates")}
               >
-                Export Duplicate Review CSV
+                Export Duplicates CSV
               </button>
               <button
                 type="button"
                 className="rounded-lg border border-line bg-white px-4 py-3 text-left text-sm font-semibold md:col-span-2"
                 onClick={() => download("summary")}
               >
-                Export Summary Report CSV
+                Export Summary CSV
               </button>
             </div>
           </SectionCard>
@@ -100,9 +102,7 @@ export default function ExportPage() {
                 <li>Rows flagged: {summary.rows_flagged}</li>
                 <li>Suspected duplicates: {summary.suspected_duplicates_count}</li>
                 <li>Uncategorized count: {summary.uncategorized_count}</li>
-                <li>
-                  Last updated: {summary.last_updated ? new Date(summary.last_updated).toLocaleString() : "-"}
-                </li>
+                <li>Last updated: {new Date(summary.last_updated).toLocaleString()}</li>
               </ul>
             ) : (
               <p className="text-sm text-muted">Summary is not available.</p>

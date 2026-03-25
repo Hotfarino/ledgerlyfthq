@@ -36,6 +36,7 @@ def apply_category_rules(rows: List[TransactionRow], rules: List[CategoryRule], 
             row.category_confidence = _score_confidence(best_rule.confidence, best_strength)
             if not preview_only and not row.cleaned_values.get("category"):
                 row.cleaned_values["category"] = best_rule.suggested_category
+                row.category = best_rule.suggested_category
                 row.flags = [f for f in row.flags if f != "uncategorized_transaction"]
 
     return rows

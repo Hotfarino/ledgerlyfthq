@@ -3,7 +3,7 @@ export const CANONICAL_COLUMNS = [
   "description",
   "payee",
   "vendor",
-  "memo",
+  "notes",
   "amount",
   "debit",
   "credit",

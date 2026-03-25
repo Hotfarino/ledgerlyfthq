@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-const ACTIVE_JOB_KEY = "ledgerlift.activeJobId";
-const ACTIVE_JOB_EVENT = "ledgerlift:active-job-changed";
+const ACTIVE_JOB_KEY = "ledgerlyfthq.activeJobId";
+const ACTIVE_JOB_EVENT = "ledgerlyfthq:active-job-changed";
 
 function readActiveJobId(): string {
   if (typeof window === "undefined") return "";

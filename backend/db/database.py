@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Optional
 
 from app.config import DB_PATH
 
@@ -36,7 +35,9 @@ class Database:
                     file_path TEXT NOT NULL,
                     uploaded_at TEXT NOT NULL,
                     row_count INTEGER NOT NULL,
+                    source_headers_json TEXT NOT NULL,
                     column_mapping_json TEXT NOT NULL,
+                    preview_rows_json TEXT NOT NULL,
                     summary_json TEXT NOT NULL,
                     raw_df_json TEXT NOT NULL,
                     last_export_at TEXT
@@ -44,22 +45,31 @@ class Database:
 
                 CREATE TABLE IF NOT EXISTS rows (
                     job_id TEXT NOT NULL,
-                    row_index INTEGER NOT NULL,
-                    transaction_id TEXT,
-                    original_json TEXT NOT NULL,
-                    cleaned_json TEXT NOT NULL,
-                    flags_json TEXT NOT NULL,
+                    row_id TEXT NOT NULL,
+                    source_row_index INTEGER NOT NULL,
+                    date TEXT,
+                    description TEXT,
+                    payee TEXT,
+                    amount REAL,
+                    debit REAL,
+                    credit REAL,
+                    category TEXT,
+                    account TEXT,
                     notes TEXT,
+                    flags_json TEXT NOT NULL,
+                    cleaned_json TEXT NOT NULL,
+                    original_json TEXT NOT NULL,
                     review_status TEXT NOT NULL,
                     category_suggestion TEXT,
                     category_confidence TEXT,
-                    PRIMARY KEY(job_id, row_index)
+                    PRIMARY KEY(job_id, row_id)
                 );
 
                 CREATE TABLE IF NOT EXISTS exceptions (
                     id TEXT PRIMARY KEY,
                     job_id TEXT NOT NULL,
-                    row_index INTEGER NOT NULL,
+                    row_id TEXT NOT NULL,
+                    source_row_index INTEGER NOT NULL,
                     flag_type TEXT NOT NULL,
                     severity TEXT NOT NULL,
                     message TEXT NOT NULL,
@@ -70,7 +80,8 @@ class Database:
                 CREATE TABLE IF NOT EXISTS duplicates (
                     id TEXT PRIMARY KEY,
                     job_id TEXT NOT NULL,
-                    row_indices_json TEXT NOT NULL,
+                    row_ids_json TEXT NOT NULL,
+                    source_row_indexes_json TEXT NOT NULL,
                     confidence TEXT NOT NULL,
                     match_type TEXT NOT NULL,
                     reason TEXT NOT NULL,
@@ -92,7 +103,8 @@ class Database:
                 CREATE TABLE IF NOT EXISTS audit_entries (
                     id TEXT PRIMARY KEY,
                     job_id TEXT NOT NULL,
-                    row_index INTEGER,
+                    row_id TEXT,
+                    source_row_index INTEGER,
                     field_name TEXT,
                     old_value TEXT,
                     new_value TEXT,

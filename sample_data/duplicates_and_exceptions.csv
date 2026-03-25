@@ -1,0 +1,9 @@
+Date,Description,Payee,Debit,Credit,Category,Account,Notes
+2026-02-01,Restaurant,Chipotle,23.44,,Meals,Checking,
+2026-02-01,Restaurant,Chipotle,23.44,,Meals,Checking,
+2026-02-01,Restaurant Lunch,Chipotle,23.44,,Meals,Checking,near duplicate text
+2026/02/02,,Amazon,120.00,,Software,Checking,missing description
+bad-date,Parking Meter,City Parking,17.00,,Travel,Checking,invalid date
+2026-02-03,Transfer to Savings,,300.00,,Transfers,Checking,
+2026-02-03,Transfer from Checking,Savings Account,,300.00,Transfers,Savings,
+2026-02-04,Malformed row,,,,,,

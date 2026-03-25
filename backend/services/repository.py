@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -10,10 +9,11 @@ from models.schemas import (
     CategoryRule,
     DuplicateGroup,
     ExceptionFlag,
-    ExportJobSummary,
+    ExportSummary,
+    JobPreview,
     ReviewStatus,
     TransactionRow,
-    UploadedFile,
+    UploadJob,
 )
 from rules.default_rules import get_default_rules
 
@@ -26,7 +26,7 @@ class Repository:
             ).fetchall()
         return [
             {
-                "id": row["id"],
+                "job_id": row["id"],
                 "file_name": row["file_name"],
                 "uploaded_at": row["uploaded_at"],
                 "row_count": row["row_count"],
@@ -38,24 +38,29 @@ class Repository:
 
     def create_job(
         self,
-        uploaded_file: UploadedFile,
+        upload_job: UploadJob,
+        preview_rows: List[dict],
         raw_df_json: str,
-        summary: ExportJobSummary,
+        summary: ExportSummary,
     ) -> None:
         with db.connection() as conn:
             conn.execute(
                 """
-                INSERT INTO jobs (id, file_name, file_type, file_path, uploaded_at, row_count, column_mapping_json, summary_json, raw_df_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs (
+                    id, file_name, file_type, file_path, uploaded_at, row_count,
+                    source_headers_json, column_mapping_json, preview_rows_json, summary_json, raw_df_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    uploaded_file.job_id,
-                    uploaded_file.file_name,
-                    uploaded_file.file_type,
-                    uploaded_file.file_path,
-                    uploaded_file.uploaded_at.isoformat(),
-                    uploaded_file.row_count,
-                    db.dumps(uploaded_file.column_mapping),
+                    upload_job.job_id,
+                    upload_job.file_name,
+                    upload_job.file_type,
+                    upload_job.file_path,
+                    upload_job.uploaded_at.isoformat(),
+                    upload_job.row_count,
+                    db.dumps(upload_job.source_headers),
+                    db.dumps(upload_job.column_mapping),
+                    db.dumps(preview_rows),
                     db.dumps(summary.model_dump(mode="json")),
                     raw_df_json,
                 ),
@@ -65,72 +70,99 @@ class Repository:
         self,
         job_id: str,
         column_mapping: Dict[str, str],
-        summary: ExportJobSummary,
-        raw_df_json: Optional[str] = None,
+        summary: ExportSummary,
+        preview_rows: Optional[List[dict]] = None,
+        source_headers: Optional[List[str]] = None,
     ) -> None:
         with db.connection() as conn:
-            if raw_df_json is None:
+            if preview_rows is None and source_headers is None:
                 conn.execute(
                     "UPDATE jobs SET column_mapping_json = ?, summary_json = ? WHERE id = ?",
                     (db.dumps(column_mapping), db.dumps(summary.model_dump(mode="json")), job_id),
                 )
-            else:
-                conn.execute(
-                    "UPDATE jobs SET column_mapping_json = ?, summary_json = ?, raw_df_json = ? WHERE id = ?",
-                    (db.dumps(column_mapping), db.dumps(summary.model_dump(mode="json")), raw_df_json, job_id),
-                )
+                return
 
-    def set_last_export_time(self, job_id: str, exported_at: datetime) -> None:
-        with db.connection() as conn:
-            conn.execute("UPDATE jobs SET last_export_at = ? WHERE id = ?", (exported_at.isoformat(), job_id))
-            row = conn.execute("SELECT summary_json FROM jobs WHERE id = ?", (job_id,)).fetchone()
-            if row:
-                summary = db.loads(row["summary_json"], {})
-                summary["export_timestamp"] = exported_at.isoformat()
-                summary["last_updated"] = exported_at.isoformat()
-                conn.execute("UPDATE jobs SET summary_json = ? WHERE id = ?", (db.dumps(summary), job_id))
+            row = conn.execute("SELECT source_headers_json, preview_rows_json FROM jobs WHERE id = ?", (job_id,)).fetchone()
+            current_headers = db.loads(row["source_headers_json"], []) if row else []
+            current_preview = db.loads(row["preview_rows_json"], []) if row else []
+            conn.execute(
+                """
+                UPDATE jobs
+                SET column_mapping_json = ?, summary_json = ?, source_headers_json = ?, preview_rows_json = ?
+                WHERE id = ?
+                """,
+                (
+                    db.dumps(column_mapping),
+                    db.dumps(summary.model_dump(mode="json")),
+                    db.dumps(source_headers if source_headers is not None else current_headers),
+                    db.dumps(preview_rows if preview_rows is not None else current_preview),
+                    job_id,
+                ),
+            )
 
     def get_job(self, job_id: str) -> Optional[dict[str, Any]]:
         with db.connection() as conn:
             row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
-            if not row:
-                return None
-            return {
-                "id": row["id"],
-                "file_name": row["file_name"],
-                "file_type": row["file_type"],
-                "file_path": row["file_path"],
-                "uploaded_at": row["uploaded_at"],
-                "row_count": row["row_count"],
-                "column_mapping": db.loads(row["column_mapping_json"], {}),
-                "summary": db.loads(row["summary_json"], {}),
-                "raw_df_json": row["raw_df_json"],
-                "last_export_at": row["last_export_at"],
-            }
+        if not row:
+            return None
 
-    def get_uploaded_file(self, job_id: str) -> Optional[UploadedFile]:
+        return {
+            "job_id": row["id"],
+            "file_name": row["file_name"],
+            "file_type": row["file_type"],
+            "file_path": row["file_path"],
+            "uploaded_at": row["uploaded_at"],
+            "row_count": row["row_count"],
+            "source_headers": db.loads(row["source_headers_json"], []),
+            "column_mapping": db.loads(row["column_mapping_json"], {}),
+            "preview_rows": db.loads(row["preview_rows_json"], []),
+            "summary": db.loads(row["summary_json"], {}),
+            "raw_df_json": row["raw_df_json"],
+            "last_export_at": row["last_export_at"],
+        }
+
+    def get_upload_job(self, job_id: str) -> Optional[UploadJob]:
         payload = self.get_job(job_id)
         if not payload:
             return None
-        return UploadedFile(
-            id=job_id,
-            job_id=job_id,
+        return UploadJob(
+            job_id=payload["job_id"],
             file_name=payload["file_name"],
             file_type=payload["file_type"],
             file_path=payload["file_path"],
             uploaded_at=datetime.fromisoformat(payload["uploaded_at"]),
             row_count=payload["row_count"],
+            source_headers=payload["source_headers"],
             column_mapping=payload["column_mapping"],
         )
 
-    def get_summary(self, job_id: str) -> Optional[ExportJobSummary]:
+    def get_preview(self, job_id: str) -> Optional[JobPreview]:
         payload = self.get_job(job_id)
         if not payload:
             return None
-        summary = payload["summary"]
-        if not summary:
+        return JobPreview(
+            job_id=job_id,
+            source_headers=payload["source_headers"],
+            column_mapping=payload["column_mapping"],
+            preview_rows=payload["preview_rows"],
+        )
+
+    def get_summary(self, job_id: str) -> Optional[ExportSummary]:
+        payload = self.get_job(job_id)
+        if not payload:
             return None
-        return ExportJobSummary(**summary)
+        return ExportSummary(**payload["summary"])
+
+    def set_last_export_time(self, job_id: str, exported_at: datetime) -> None:
+        with db.connection() as conn:
+            conn.execute("UPDATE jobs SET last_export_at = ? WHERE id = ?", (exported_at.isoformat(), job_id))
+            row = conn.execute("SELECT summary_json FROM jobs WHERE id = ?", (job_id,)).fetchone()
+            if not row:
+                return
+            summary = db.loads(row["summary_json"], {})
+            summary["export_timestamp"] = exported_at.isoformat()
+            summary["last_updated"] = exported_at.isoformat()
+            conn.execute("UPDATE jobs SET summary_json = ? WHERE id = ?", (db.dumps(summary), job_id))
 
     def replace_rows(self, job_id: str, rows: List[TransactionRow]) -> None:
         with db.connection() as conn:
@@ -138,19 +170,28 @@ class Repository:
             conn.executemany(
                 """
                 INSERT INTO rows (
-                    job_id, row_index, transaction_id, original_json, cleaned_json,
-                    flags_json, notes, review_status, category_suggestion, category_confidence
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    job_id, row_id, source_row_index, date, description, payee,
+                    amount, debit, credit, category, account, notes, flags_json,
+                    cleaned_json, original_json, review_status, category_suggestion, category_confidence
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         row.job_id,
-                        row.row_index,
-                        row.transaction_id,
-                        db.dumps(row.original_values),
-                        db.dumps(row.cleaned_values),
-                        db.dumps(row.flags),
+                        row.row_id,
+                        row.source_row_index,
+                        row.date,
+                        row.description,
+                        row.payee,
+                        row.amount,
+                        row.debit,
+                        row.credit,
+                        row.category,
+                        row.account,
                         row.notes,
+                        db.dumps(row.flags),
+                        db.dumps(row.cleaned_values),
+                        db.dumps(row.original_values),
                         row.review_status.value,
                         row.category_suggestion,
                         row.category_confidence.value if row.category_confidence else None,
@@ -161,22 +202,28 @@ class Repository:
 
     def list_rows(self, job_id: str) -> List[TransactionRow]:
         with db.connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM rows WHERE job_id = ? ORDER BY row_index ASC",
-                (job_id,),
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM rows WHERE job_id = ? ORDER BY source_row_index ASC", (job_id,)).fetchall()
+
         output: List[TransactionRow] = []
         for row in rows:
             status = row["review_status"] if row["review_status"] in {"pending", "reviewed", "approved"} else "pending"
             output.append(
                 TransactionRow(
+                    row_id=row["row_id"],
                     job_id=row["job_id"],
-                    row_index=row["row_index"],
-                    transaction_id=row["transaction_id"],
-                    original_values=db.loads(row["original_json"], {}),
-                    cleaned_values=db.loads(row["cleaned_json"], {}),
+                    source_row_index=row["source_row_index"],
+                    date=row["date"] or "",
+                    description=row["description"] or "",
+                    payee=row["payee"] or "",
+                    amount=row["amount"],
+                    debit=row["debit"],
+                    credit=row["credit"],
+                    category=row["category"] or "",
+                    account=row["account"] or "",
+                    notes=row["notes"] or "",
                     flags=db.loads(row["flags_json"], []),
-                    notes=row["notes"],
+                    cleaned_values=db.loads(row["cleaned_json"], {}),
+                    original_values=db.loads(row["original_json"], {}),
                     review_status=ReviewStatus(status),
                     category_suggestion=row["category_suggestion"],
                     category_confidence=row["category_confidence"],
@@ -189,14 +236,15 @@ class Repository:
             conn.execute("DELETE FROM exceptions WHERE job_id = ?", (job_id,))
             conn.executemany(
                 """
-                INSERT INTO exceptions (id, job_id, row_index, flag_type, severity, message, details_json, reviewed)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO exceptions (id, job_id, row_id, source_row_index, flag_type, severity, message, details_json, reviewed)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         item.id,
                         item.job_id,
-                        item.row_index,
+                        item.row_id,
+                        item.source_row_index,
                         item.flag_type,
                         item.severity,
                         item.message,
@@ -209,15 +257,14 @@ class Repository:
 
     def list_exceptions(self, job_id: str) -> List[ExceptionFlag]:
         with db.connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM exceptions WHERE job_id = ? ORDER BY row_index ASC",
-                (job_id,),
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM exceptions WHERE job_id = ? ORDER BY source_row_index ASC", (job_id,)).fetchall()
+
         return [
             ExceptionFlag(
                 id=row["id"],
                 job_id=row["job_id"],
-                row_index=row["row_index"],
+                row_id=row["row_id"],
+                source_row_index=row["source_row_index"],
                 flag_type=row["flag_type"],
                 severity=row["severity"],
                 message=row["message"],
@@ -232,14 +279,15 @@ class Repository:
             conn.execute("DELETE FROM duplicates WHERE job_id = ?", (job_id,))
             conn.executemany(
                 """
-                INSERT INTO duplicates (id, job_id, row_indices_json, confidence, match_type, reason, reviewed)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO duplicates (id, job_id, row_ids_json, source_row_indexes_json, confidence, match_type, reason, reviewed)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         item.id,
                         item.job_id,
-                        db.dumps(item.row_indices),
+                        db.dumps(item.row_ids),
+                        db.dumps(item.source_row_indexes),
                         item.confidence.value,
                         item.match_type,
                         item.reason,
@@ -251,15 +299,14 @@ class Repository:
 
     def list_duplicates(self, job_id: str) -> List[DuplicateGroup]:
         with db.connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM duplicates WHERE job_id = ? ORDER BY id ASC",
-                (job_id,),
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM duplicates WHERE job_id = ? ORDER BY id ASC", (job_id,)).fetchall()
+
         return [
             DuplicateGroup(
                 id=row["id"],
                 job_id=row["job_id"],
-                row_indices=db.loads(row["row_indices_json"], []),
+                row_ids=db.loads(row["row_ids_json"], []),
+                source_row_indexes=db.loads(row["source_row_indexes_json"], []),
                 confidence=row["confidence"],
                 match_type=row["match_type"],
                 reason=row["reason"],
@@ -273,14 +320,15 @@ class Repository:
             conn.execute("DELETE FROM audit_entries WHERE job_id = ?", (job_id,))
             conn.executemany(
                 """
-                INSERT INTO audit_entries (id, job_id, row_index, field_name, old_value, new_value, action, note, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO audit_entries (id, job_id, row_id, source_row_index, field_name, old_value, new_value, action, note, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         entry.id,
                         entry.job_id,
-                        entry.row_index,
+                        entry.row_id,
+                        entry.source_row_index,
                         entry.field_name,
                         entry.old_value,
                         entry.new_value,
@@ -298,14 +346,15 @@ class Repository:
         with db.connection() as conn:
             conn.executemany(
                 """
-                INSERT INTO audit_entries (id, job_id, row_index, field_name, old_value, new_value, action, note, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO audit_entries (id, job_id, row_id, source_row_index, field_name, old_value, new_value, action, note, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         entry.id,
                         entry.job_id,
-                        entry.row_index,
+                        entry.row_id,
+                        entry.source_row_index,
                         entry.field_name,
                         entry.old_value,
                         entry.new_value,
@@ -319,15 +368,14 @@ class Repository:
 
     def list_audit_entries(self, job_id: str) -> List[AuditEntry]:
         with db.connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM audit_entries WHERE job_id = ? ORDER BY created_at DESC",
-                (job_id,),
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM audit_entries WHERE job_id = ? ORDER BY created_at DESC", (job_id,)).fetchall()
+
         return [
             AuditEntry(
                 id=row["id"],
                 job_id=row["job_id"],
-                row_index=row["row_index"],
+                row_id=row["row_id"],
+                source_row_index=row["source_row_index"],
                 field_name=row["field_name"],
                 old_value=row["old_value"],
                 new_value=row["new_value"],
@@ -342,16 +390,12 @@ class Repository:
         with db.connection() as conn:
             if target == "rows":
                 if not ids:
-                    cursor = conn.execute(
-                        "UPDATE rows SET review_status = ? WHERE job_id = ?",
-                        (status.value, job_id),
-                    )
+                    cursor = conn.execute("UPDATE rows SET review_status = ? WHERE job_id = ?", (status.value, job_id))
                 else:
-                    numeric_ids = [int(item) for item in ids]
-                    placeholders = ",".join("?" for _ in numeric_ids)
+                    placeholders = ",".join("?" for _ in ids)
                     cursor = conn.execute(
-                        f"UPDATE rows SET review_status = ? WHERE job_id = ? AND row_index IN ({placeholders})",
-                        [status.value, job_id, *numeric_ids],
+                        f"UPDATE rows SET review_status = ? WHERE job_id = ? AND row_id IN ({placeholders})",
+                        [status.value, job_id, *ids],
                     )
                 return cursor.rowcount
 
@@ -359,6 +403,7 @@ class Repository:
             if not ids:
                 cursor = conn.execute(f"UPDATE {table} SET reviewed = 1 WHERE job_id = ?", (job_id,))
                 return cursor.rowcount
+
             placeholders = ",".join("?" for _ in ids)
             cursor = conn.execute(
                 f"UPDATE {table} SET reviewed = 1 WHERE job_id = ? AND id IN ({placeholders})",
