@@ -7,10 +7,11 @@ from typing import Dict, List
 
 from fastapi import UploadFile
 
-from app.config import UPLOAD_DIR
+from app.config import ENABLE_SHARED_ADAPTER, UPLOAD_DIR
 from models.schemas import (
     AuditEntry,
     CategoryRule,
+    ExecutionMode,
     ExportSummary,
     JobPreview,
     TransactionRow,
@@ -33,6 +34,17 @@ from services.repository import repository
 class JobService:
     def __init__(self) -> None:
         repository.ensure_default_rules()
+
+    @staticmethod
+    def _assert_mode_is_supported(execution_mode: ExecutionMode) -> None:
+        if execution_mode == ExecutionMode.SHARED_ADAPTER and not ENABLE_SHARED_ADAPTER:
+            raise ValueError(
+                "shared_adapter mode is disabled. Keep execution isolated unless explicitly enabled by mode flag."
+            )
+        if execution_mode == ExecutionMode.SHARED_ADAPTER:
+            raise ValueError(
+                "shared_adapter mode is reserved and intentionally isolated from the legacy live-send path in V1."
+            )
 
     def _build_summary(self, job_id: str, rows: List[TransactionRow], duplicate_count: int) -> ExportSummary:
         rows_flagged = sum(1 for row in rows if row.flags)
@@ -132,7 +144,13 @@ class JobService:
 
         return rows, summary
 
-    def rerun_cleanup(self, job_id: str, column_mapping: Dict[str, str]) -> ExportSummary:
+    def rerun_cleanup(
+        self,
+        job_id: str,
+        column_mapping: Dict[str, str],
+        execution_mode: ExecutionMode = ExecutionMode.ISOLATED,
+    ) -> ExportSummary:
+        self._assert_mode_is_supported(execution_mode)
         job = repository.get_job(job_id)
         if not job:
             raise ValueError("Job not found")
@@ -148,7 +166,7 @@ class JobService:
                     id=str(uuid.uuid4()),
                     job_id=job_id,
                     action="cleanup_rerun",
-                    note="Cleanup re-run with updated column mapping.",
+                    note=f"Cleanup re-run with updated column mapping (mode={execution_mode.value}).",
                     created_at=datetime.utcnow(),
                 )
             ]
@@ -156,7 +174,13 @@ class JobService:
 
         return summary
 
-    def apply_category_rules(self, job_id: str, preview_only: bool = False) -> ExportSummary:
+    def apply_category_rules(
+        self,
+        job_id: str,
+        preview_only: bool = False,
+        execution_mode: ExecutionMode = ExecutionMode.ISOLATED,
+    ) -> ExportSummary:
+        self._assert_mode_is_supported(execution_mode)
         rows = repository.list_rows(job_id)
         if not rows:
             raise ValueError("Job not found or no rows available")
@@ -175,7 +199,10 @@ class JobService:
                     id=str(uuid.uuid4()),
                     job_id=job_id,
                     action="apply_category_rules",
-                    note=f"Category rules {'previewed' if preview_only else 'applied'}.",
+                    note=(
+                        f"Category rules {'previewed' if preview_only else 'applied'} "
+                        f"(mode={execution_mode.value})."
+                    ),
                     created_at=datetime.utcnow(),
                 )
             ]

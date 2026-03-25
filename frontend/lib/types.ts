@@ -1,5 +1,6 @@
 export type ConfidenceLevel = "high" | "medium" | "low";
 export type ReviewStatus = "pending" | "reviewed" | "approved";
+export type ExecutionMode = "isolated" | "shared_adapter";
 
 export interface UploadJob {
   job_id: string;
@@ -121,4 +122,29 @@ export interface DashboardMetrics {
   exceptions_flagged: number;
   uncategorized_transactions: number;
   last_export_time: string | null;
+}
+
+export interface ExecutionGuardrails {
+  default_mode: ExecutionMode;
+  shared_adapter_enabled: boolean;
+  allow_legacy_live_send_reuse: boolean;
+  policy_note: string;
+}
+
+export interface Phase0PainPoint {
+  key: "selection" | "slippage" | "router_lag" | "venue_lag" | "fill_quality";
+  label: string;
+  count: number;
+  percent_of_signals: number;
+}
+
+export interface Phase0Report {
+  lookback_days: number;
+  generated_at: string;
+  jobs_analyzed: number;
+  rows_analyzed: number;
+  signals_total: number;
+  top_pain_area: string;
+  pain_points: Phase0PainPoint[];
+  notes: string[];
 }

@@ -3,10 +3,13 @@ import {
   CategoryRule,
   DashboardMetrics,
   DuplicateGroup,
+  ExecutionGuardrails,
+  ExecutionMode,
   ExceptionFlag,
   ExportSummary,
   JobPreview,
   JobRecord,
+  Phase0Report,
   TransactionRow,
   UploadResponse
 } from "@/lib/types";
@@ -39,6 +42,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
   return request<DashboardMetrics>("/dashboard/metrics");
+}
+
+export async function fetchExecutionGuardrails(): Promise<ExecutionGuardrails> {
+  return request<ExecutionGuardrails>("/execution/guardrails");
+}
+
+export async function fetchPhase0Report(days = 60): Promise<Phase0Report> {
+  return request<Phase0Report>(`/phase0/report?days=${days}`);
 }
 
 export async function fetchJobs(): Promise<JobRecord[]> {
@@ -98,18 +109,26 @@ export async function fetchAuditLog(jobId: string): Promise<AuditEntry[]> {
   return payload.entries;
 }
 
-export async function applyCleanup(jobId: string, columnMapping: Record<string, string>): Promise<ExportSummary> {
+export async function applyCleanup(
+  jobId: string,
+  columnMapping: Record<string, string>,
+  executionMode: ExecutionMode = "isolated"
+): Promise<ExportSummary> {
   const payload = await request<{ job_id: string; summary: ExportSummary }>(`/jobs/${jobId}/apply-cleanup`, {
     method: "POST",
-    body: JSON.stringify({ column_mapping: columnMapping })
+    body: JSON.stringify({ column_mapping: columnMapping, execution_mode: executionMode })
   });
   return payload.summary;
 }
 
-export async function applyCategoryRules(jobId: string, previewOnly = false): Promise<ExportSummary> {
+export async function applyCategoryRules(
+  jobId: string,
+  previewOnly = false,
+  executionMode: ExecutionMode = "isolated"
+): Promise<ExportSummary> {
   const payload = await request<{ job_id: string; summary: ExportSummary }>(`/jobs/${jobId}/apply-category-rules`, {
     method: "POST",
-    body: JSON.stringify({ preview_only: previewOnly })
+    body: JSON.stringify({ preview_only: previewOnly, execution_mode: executionMode })
   });
   return payload.summary;
 }
@@ -149,7 +168,7 @@ export async function createCategoryRule(payload: {
 
 export function getExportUrl(
   jobId: string,
-  kind: "cleaned" | "exceptions" | "duplicates" | "summary",
+  kind: "cleaned" | "exceptions" | "duplicates" | "summary" | "audit-log",
   fileType?: "csv" | "xlsx"
 ): string {
   if (kind === "cleaned") {

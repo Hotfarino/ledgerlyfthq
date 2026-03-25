@@ -6,6 +6,7 @@ import clsx from "clsx";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/phase-0", label: "Phase 0 Diagnostics" },
   { href: "/import", label: "Import" },
   { href: "/column-mapping", label: "Column Mapping" },
   { href: "/review", label: "Review Cleaned Data" },

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
+import { PrintButton } from "@/components/print-button";
 import { SectionCard } from "@/components/section-card";
 import { fetchDuplicates, markReviewed } from "@/lib/api";
 import { DuplicateGroup } from "@/lib/types";
@@ -55,7 +56,12 @@ export default function DuplicatesPage() {
       <PageTitle
         title="Duplicate Review"
         subtitle="Exact and likely duplicates are grouped for manual review."
-        actions={<JobPicker />}
+        actions={
+          <div className="flex items-center gap-2">
+            <PrintButton />
+            <JobPicker />
+          </div>
+        }
       />
 
       <SectionCard title="Duplicate Filters">
@@ -116,8 +122,8 @@ export default function DuplicatesPage() {
                     <tr key={item.id}>
                       <td>{item.confidence}</td>
                       <td>{item.match_type}</td>
-                      <td>{item.source_row_indexes.map((index) => index + 1).join(", ")}</td>
-                      <td className="font-mono text-xs">{item.row_ids.join(", ")}</td>
+                      <td className="num-cell">{item.source_row_indexes.map((index) => index + 1).join(", ")}</td>
+                      <td className="mono-cell">{item.row_ids.join(", ")}</td>
                       <td>{item.reason}</td>
                       <td>{item.reviewed ? "yes" : "no"}</td>
                     </tr>

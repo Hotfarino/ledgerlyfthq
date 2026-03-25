@@ -33,7 +33,7 @@ export function JobPicker() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-1 text-sm">
+    <div className="no-print flex flex-col gap-1 text-sm">
       <label htmlFor="job-picker" className="text-xs font-semibold uppercase tracking-wide text-muted">
         Active Job
       </label>

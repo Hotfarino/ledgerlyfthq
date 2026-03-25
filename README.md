@@ -72,6 +72,8 @@ LedgerLift/
 - `POST /upload`
 - `GET /jobs`
 - `GET /dashboard/metrics`
+- `GET /execution/guardrails`
+- `GET /phase0/report`
 - `GET /jobs/{job_id}/preview`
 - `GET /jobs/{job_id}/summary`
 - `GET /jobs/{job_id}/rows`
@@ -86,6 +88,7 @@ LedgerLift/
 - `GET /jobs/{job_id}/export/exceptions`
 - `GET /jobs/{job_id}/export/duplicates`
 - `GET /jobs/{job_id}/export/summary`
+- `GET /jobs/{job_id}/export/audit-log`
 
 ## V1 Row Contract
 
@@ -172,6 +175,7 @@ Located in `~/Desktop/LedgerLift/sample_data`:
 4. Review rows on Cleaned Data Review page.
 5. Check Exceptions and Duplicate Review pages.
 6. Export cleaned, exceptions, duplicates, and summary files.
+7. Export audit log CSV and use Print View on review/audit pages for workpapers.
 
 ## Known Limitations (V1)
 
@@ -179,6 +183,7 @@ Located in `~/Desktop/LedgerLift/sample_data`:
 - Date normalization uses parse heuristics and may require review for ambiguous locales.
 - Duplicate logic is deterministic but not exhaustive across all edge cases.
 - Category suggestions are rule-based only (no ML in V1).
+- `shared_adapter` execution mode is reserved and blocked in V1 to preserve isolation by default.
 
 ## Roadmap (Future Versions)
 

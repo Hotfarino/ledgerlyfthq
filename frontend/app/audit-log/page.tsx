@@ -7,8 +7,9 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
+import { PrintButton } from "@/components/print-button";
 import { SectionCard } from "@/components/section-card";
-import { fetchAuditLog } from "@/lib/api";
+import { fetchAuditLog, getExportUrl } from "@/lib/api";
 import { AuditEntry } from "@/lib/types";
 import { useActiveJobId } from "@/lib/use-active-job";
 
@@ -40,7 +41,20 @@ export default function AuditLogPage() {
       <PageTitle
         title="Audit Log"
         subtitle="Before/after field changes and processing events for traceability."
-        actions={<JobPicker />}
+        actions={
+          <div className="flex items-center gap-2">
+            <PrintButton />
+            <button
+              type="button"
+              className="no-print rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold"
+              disabled={!jobId}
+              onClick={() => jobId && window.open(getExportUrl(jobId, "audit-log"), "_blank")}
+            >
+              Export Audit CSV
+            </button>
+            <JobPicker />
+          </div>
+        }
       />
 
       <SectionCard title="Audit Entries">
@@ -75,7 +89,7 @@ export default function AuditLogPage() {
                         ? entry.source_row_index + 1
                         : "-"}
                     </td>
-                    <td className="font-mono text-xs">{entry.row_id || "-"}</td>
+                    <td className="mono-cell">{entry.row_id || "-"}</td>
                     <td>{entry.field_name || "-"}</td>
                     <td className="text-xs">
                       {entry.old_value !== null && entry.old_value !== undefined

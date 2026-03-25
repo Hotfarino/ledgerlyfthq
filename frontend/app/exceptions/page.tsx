@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
+import { PrintButton } from "@/components/print-button";
 import { SectionCard } from "@/components/section-card";
 import { fetchExceptions, markReviewed } from "@/lib/api";
 import { ExceptionFlag } from "@/lib/types";
@@ -55,7 +56,12 @@ export default function ExceptionsPage() {
       <PageTitle
         title="Exceptions"
         subtitle="Rows requiring manual review due to missing or malformed values."
-        actions={<JobPicker />}
+        actions={
+          <div className="flex items-center gap-2">
+            <PrintButton />
+            <JobPicker />
+          </div>
+        }
       />
 
       <SectionCard title="Exception Filters">
@@ -116,8 +122,8 @@ export default function ExceptionsPage() {
                     <tr key={item.id}>
                       <td>{item.severity}</td>
                       <td>{item.flag_type}</td>
-                      <td>{item.source_row_index + 1}</td>
-                      <td className="font-mono text-xs">{item.row_id}</td>
+                      <td className="num-cell">{item.source_row_index + 1}</td>
+                      <td className="mono-cell">{item.row_id}</td>
                       <td>{item.message}</td>
                       <td>{item.reviewed ? "yes" : "no"}</td>
                     </tr>

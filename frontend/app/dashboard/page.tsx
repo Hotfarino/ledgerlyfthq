@@ -7,20 +7,23 @@ import { useEffect, useMemo, useState } from "react";
 import { JobPicker } from "@/components/job-picker";
 import { MetricGrid } from "@/components/metric-grid";
 import { PageTitle } from "@/components/page-title";
+import { PrintButton } from "@/components/print-button";
 import { SectionCard } from "@/components/section-card";
-import { fetchDashboardMetrics, fetchJobs } from "@/lib/api";
-import { DashboardMetrics, JobRecord } from "@/lib/types";
+import { fetchDashboardMetrics, fetchJobs, fetchPhase0Report } from "@/lib/api";
+import { DashboardMetrics, JobRecord, Phase0Report } from "@/lib/types";
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [jobs, setJobs] = useState<JobRecord[]>([]);
+  const [phase0, setPhase0] = useState<Phase0Report | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchDashboardMetrics(), fetchJobs()])
-      .then(([metricsData, jobsData]) => {
+    Promise.all([fetchDashboardMetrics(), fetchJobs(), fetchPhase0Report(60)])
+      .then(([metricsData, jobsData, phase0Data]) => {
         setMetrics(metricsData);
         setJobs(jobsData);
+        setPhase0(phase0Data);
       })
       .catch((err: Error) => setError(err.message));
   }, []);
@@ -49,7 +52,12 @@ export default function DashboardPage() {
       <PageTitle
         title="Dashboard"
         subtitle="Track current cleanup workload and output volume."
-        actions={<JobPicker />}
+        actions={
+          <div className="flex items-center gap-2">
+            <PrintButton />
+            <JobPicker />
+          </div>
+        }
       />
 
       {error ? <p className="mb-4 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">{error}</p> : null}
@@ -89,14 +97,29 @@ export default function DashboardPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Workflow Guardrails">
-          <ul className="space-y-2 text-sm text-muted">
-            <li>ledgerlyftHQ accelerates cleanup. It does not replace accounting judgment.</li>
-            <li>Duplicates, exceptions, and category suggestions always require reviewer approval.</li>
-            <li>Phase 1 is local-first with CSV/XLSX file upload and local export outputs.</li>
-            <li>No live QuickBooks API connection is used in this phase.</li>
-          </ul>
-        </SectionCard>
+        <div className="grid gap-6">
+          <SectionCard title="Phase 0 (Last 60 Days)">
+            {phase0 ? (
+              <ul className="space-y-2 text-sm">
+                <li>Top pain area: {phase0.top_pain_area}</li>
+                <li>Jobs analyzed: {phase0.jobs_analyzed}</li>
+                <li>Rows analyzed: {phase0.rows_analyzed}</li>
+                <li>Total signals: {phase0.signals_total}</li>
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">No Phase 0 data available yet.</p>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Workflow Guardrails">
+            <ul className="space-y-2 text-sm text-muted">
+              <li>Default assumption is isolated execution mode, not adapter reuse.</li>
+              <li>Any shared adapter path must be explicit, guarded, and documented.</li>
+              <li>Duplicates, exceptions, and category suggestions require reviewer approval.</li>
+              <li>No live QuickBooks API connection is used in this phase.</li>
+            </ul>
+          </SectionCard>
+        </div>
       </div>
     </div>
   );

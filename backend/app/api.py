@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
+from app.config import DEFAULT_EXECUTION_MODE, ENABLE_SHARED_ADAPTER
 from exporters.export_service import export_service
 from models.schemas import (
     ApplyCategoryRulesRequest,
@@ -14,14 +15,18 @@ from models.schemas import (
     CategoryRule,
     CategoryRuleCreateRequest,
     DuplicatesResponse,
+    ExecutionMode,
+    ExecutionGuardrails,
     ExceptionsResponse,
     JobRowsResponse,
     JobsResponse,
     MarkReviewedRequest,
+    Phase0Report,
     SuggestionsResponse,
     UploadResponse,
 )
 from services.job_service import job_service
+from services.phase0_diagnostics import build_phase0_report
 from services.repository import repository
 
 router = APIRouter()
@@ -35,6 +40,24 @@ def health() -> dict[str, str]:
 @router.get("/jobs", response_model=JobsResponse)
 def list_jobs() -> JobsResponse:
     return JobsResponse(jobs=repository.list_jobs())
+
+
+@router.get("/execution/guardrails", response_model=ExecutionGuardrails)
+def execution_guardrails() -> ExecutionGuardrails:
+    return ExecutionGuardrails(
+        default_mode=ExecutionMode(DEFAULT_EXECUTION_MODE),
+        shared_adapter_enabled=ENABLE_SHARED_ADAPTER,
+        allow_legacy_live_send_reuse=False,
+        policy_note=(
+            "New execution paths stay isolated by default. "
+            "Shared adapter use must be explicitly selected and mode-guarded."
+        ),
+    )
+
+
+@router.get("/phase0/report", response_model=Phase0Report)
+def phase0_report(days: int = Query(default=60, ge=7, le=365)) -> Phase0Report:
+    return build_phase0_report(lookback_days=days)
 
 
 @router.get("/dashboard/metrics")
@@ -159,7 +182,14 @@ def get_suggestions(job_id: str) -> SuggestionsResponse:
 def apply_cleanup(job_id: str, payload: ApplyCleanupRequest):
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-    summary = job_service.rerun_cleanup(job_id, payload.column_mapping)
+    try:
+        summary = job_service.rerun_cleanup(
+            job_id,
+            payload.column_mapping,
+            execution_mode=payload.execution_mode,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"job_id": job_id, "summary": summary}
 
 
@@ -167,7 +197,14 @@ def apply_cleanup(job_id: str, payload: ApplyCleanupRequest):
 def apply_category_rules(job_id: str, payload: ApplyCategoryRulesRequest):
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-    summary = job_service.apply_category_rules(job_id, preview_only=payload.preview_only)
+    try:
+        summary = job_service.apply_category_rules(
+            job_id,
+            preview_only=payload.preview_only,
+            execution_mode=payload.execution_mode,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"job_id": job_id, "summary": summary}
 
 
@@ -222,6 +259,14 @@ def export_summary(job_id: str):
     if not repository.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
     path = export_service.export_summary(job_id)
+    return FileResponse(path=path, filename=path.name, media_type="text/csv")
+
+
+@router.get("/jobs/{job_id}/export/audit-log")
+def export_audit_log(job_id: str):
+    if not repository.get_job(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
+    path = export_service.export_audit_log(job_id)
     return FileResponse(path=path, filename=path.name, media_type="text/csv")
 
 

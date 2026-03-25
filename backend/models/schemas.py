@@ -13,6 +13,11 @@ class ConfidenceLevel(str, Enum):
     LOW = "low"
 
 
+class ExecutionMode(str, Enum):
+    ISOLATED = "isolated"
+    SHARED_ADAPTER = "shared_adapter"
+
+
 class ReviewStatus(str, Enum):
     PENDING = "pending"
     REVIEWED = "reviewed"
@@ -129,10 +134,12 @@ class JobsResponse(BaseModel):
 
 class ApplyCleanupRequest(BaseModel):
     column_mapping: Dict[str, str] = Field(default_factory=dict)
+    execution_mode: ExecutionMode = ExecutionMode.ISOLATED
 
 
 class ApplyCategoryRulesRequest(BaseModel):
     preview_only: bool = False
+    execution_mode: ExecutionMode = ExecutionMode.ISOLATED
 
 
 class MarkReviewedRequest(BaseModel):
@@ -173,3 +180,28 @@ class SuggestionsResponse(BaseModel):
 class AuditResponse(BaseModel):
     job_id: str
     entries: List[AuditEntry]
+
+
+class ExecutionGuardrails(BaseModel):
+    default_mode: ExecutionMode
+    shared_adapter_enabled: bool
+    allow_legacy_live_send_reuse: bool = False
+    policy_note: str
+
+
+class Phase0PainPoint(BaseModel):
+    key: str
+    label: str
+    count: int
+    percent_of_signals: float
+
+
+class Phase0Report(BaseModel):
+    lookback_days: int
+    generated_at: datetime
+    jobs_analyzed: int
+    rows_analyzed: int
+    signals_total: int
+    top_pain_area: str
+    pain_points: List[Phase0PainPoint] = Field(default_factory=list)
+    notes: List[str] = Field(default_factory=list)

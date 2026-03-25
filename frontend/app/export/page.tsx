@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
+import { PrintButton } from "@/components/print-button";
 import { SectionCard } from "@/components/section-card";
 import { fetchSummary, getExportUrl } from "@/lib/api";
 import { ExportSummary } from "@/lib/types";
@@ -35,7 +36,10 @@ export default function ExportPage() {
       });
   }, [jobId]);
 
-  function download(kind: "cleaned" | "exceptions" | "duplicates" | "summary", fileType?: "csv" | "xlsx") {
+  function download(
+    kind: "cleaned" | "exceptions" | "duplicates" | "summary" | "audit-log",
+    fileType?: "csv" | "xlsx"
+  ) {
     if (!jobId) return;
     window.open(getExportUrl(jobId, kind, fileType), "_blank");
   }
@@ -45,7 +49,12 @@ export default function ExportPage() {
       <PageTitle
         title="Export"
         subtitle="Download cleaned data, exceptions, duplicates, and summary report files."
-        actions={<JobPicker />}
+        actions={
+          <div className="flex items-center gap-2">
+            <PrintButton />
+            <JobPicker />
+          </div>
+        }
       />
 
       {error ? <p className="mb-3 rounded bg-red-100 px-3 py-2 text-sm text-red-700">{error}</p> : null}
@@ -90,6 +99,13 @@ export default function ExportPage() {
                 onClick={() => download("summary")}
               >
                 Export Summary CSV
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-line bg-white px-4 py-3 text-left text-sm font-semibold md:col-span-2"
+                onClick={() => download("audit-log")}
+              >
+                Export Audit Log CSV
               </button>
             </div>
           </SectionCard>

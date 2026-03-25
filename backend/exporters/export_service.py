@@ -128,5 +128,31 @@ class ExportService:
         repository.set_last_export_time(job_id, datetime.utcnow())
         return output_path
 
+    def export_audit_log(self, job_id: str) -> Path:
+        entries = repository.list_audit_entries(job_id)
+        df = pd.DataFrame(
+            [
+                {
+                    "id": entry.id,
+                    "job_id": entry.job_id,
+                    "row_id": entry.row_id or "",
+                    "source_row_index": entry.source_row_index,
+                    "field_name": entry.field_name or "",
+                    "old_value": entry.old_value or "",
+                    "new_value": entry.new_value or "",
+                    "action": entry.action,
+                    "note": entry.note or "",
+                    "created_at": entry.created_at.isoformat(),
+                }
+                for entry in entries
+            ]
+        )
+
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        output_path = EXPORT_DIR / f"{job_id}_audit_log_{timestamp}.csv"
+        df.to_csv(output_path, index=False)
+        repository.set_last_export_time(job_id, datetime.utcnow())
+        return output_path
+
 
 export_service = ExportService()

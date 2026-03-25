@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/empty-state";
 import { FlagChip } from "@/components/flag-chip";
 import { JobPicker } from "@/components/job-picker";
 import { PageTitle } from "@/components/page-title";
+import { PrintButton } from "@/components/print-button";
 import { SectionCard } from "@/components/section-card";
 import { fetchRows, markReviewed } from "@/lib/api";
 import { TransactionRow } from "@/lib/types";
@@ -67,7 +68,12 @@ export default function ReviewPage() {
       <PageTitle
         title="Cleaned Data Review"
         subtitle="Review cleaned rows, flags, and before/after values before export."
-        actions={<JobPicker />}
+        actions={
+          <div className="flex items-center gap-2">
+            <PrintButton />
+            <JobPicker />
+          </div>
+        }
       />
 
       <SectionCard title="Filters and Actions">
@@ -162,7 +168,7 @@ export default function ReviewPage() {
                         <div className="font-medium">{row.payee || "-"}</div>
                         <div className="text-xs text-muted">{row.description || "-"}</div>
                       </td>
-                      <td className="font-mono">{row.amount ?? ""}</td>
+                      <td className="num-cell">{row.amount ?? ""}</td>
                       <td>
                         <div>{row.category || "-"}</div>
                         {row.category_suggestion ? (
@@ -179,7 +185,7 @@ export default function ReviewPage() {
                         </div>
                       </td>
                       <td>{row.review_status}</td>
-                      <td className="text-xs text-muted">
+                      <td className="mono-cell text-muted">
                         <div>Orig: {String(row.original_values["Description"] || row.original_values["Details"] || "")}</div>
                         <div>Clean: {row.description || ""}</div>
                       </td>
