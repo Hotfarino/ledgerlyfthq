@@ -14,6 +14,13 @@ import { CANONICAL_COLUMNS } from "@/lib/constants";
 import { JobPreview } from "@/lib/types";
 import { useActiveJobId } from "@/lib/use-active-job";
 
+function formatPreviewHeader(header: string): string {
+  return header
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function ColumnMappingPage() {
   const router = useRouter();
   const [jobId] = useActiveJobId();
@@ -128,7 +135,9 @@ export default function ColumnMappingPage() {
                     <thead>
                       <tr>
                         {headers.map((header) => (
-                          <th key={header}>{header}</th>
+                          <th key={header} title={header}>
+                            {formatPreviewHeader(header)}
+                          </th>
                         ))}
                       </tr>
                     </thead>
