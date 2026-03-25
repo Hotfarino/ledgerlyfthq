@@ -80,7 +80,13 @@ def _normalize_amount(amount: Any, debit: Any, credit: Any) -> tuple[Optional[fl
 
 
 def _detect_malformed_row(cleaned: Dict[str, Any]) -> bool:
-    populated = [key for key, value in cleaned.items() if str(value).strip()]
+    populated = []
+    for key, value in cleaned.items():
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        populated.append(key)
     return len(populated) <= 1
 
 
