@@ -1,0 +1,46 @@
+Date,Description,Payee,Amount,Category,Account,Notes,__source_file,__source_row_number,Txn Date,Merchant,Details,Withdrawal,Deposit,Acct Balance,Class,Memo,Reference ID,Debit,Credit,__synthetic_duplicate,__duplicate_of_index
+,,,,,,,messy_transactions.csv,6,01/04/2026,Savings Account,Transfer from checking,,500.00,1551.90,Transfers,,abc-005,,,yes,10
+2026-01-04,Utility Bill,Duke Energy,-318.12,Utilities,Checking,January service,normal_transactions.xlsx,3,,,,,,,,,,,,no,
+2026-01-05,Software Subscription,Notion,-120,Software,Checking,Monthly plan,normal_transactions.xlsx,4,,,,,,,,,,,,no,
+,,,,,,,messy_transactions.csv,3,1-3-26,Acme Supplies,Office paper,24.10,,1576.00,Office,,abc-003,,,yes,7
+2026-01-04,Utility Bill,Duke Energy,-318.12,Utilities,Checking,January service,normal_transactions.xlsx,3,,,,,,,,,,,,yes,25
+2026-02-03,Transfer to Savings,,,Transfers,Checking,,duplicates_and_exceptions.csv,6,,,,,,,,,,300.00,,yes,20
+2026-01-06,Fuel,Shell,-64.21,Fuel,Credit Card,Company vehicle,normal_transactions.csv,5,,,,,,,,,,,,no,
+,,,,,,,messy_transactions.csv,8,01/05/2026,   ,,,$45.00,1578.18,,,,,,no,
+,,,,,,,messy_transactions.csv,4,01/03/2026,Acme Supplies,Office paper,24.10,,1551.90,Office,,abc-003,,,no,
+2026-01-05,Software Subscription,Notion,-120.00,Software,Checking,Monthly plan,normal_transactions.csv,4,,,,,,,,,,,,no,
+,,,,,,,messy_transactions.csv,2,2026-01-02,Amazon Web Services,AWS Jan invoice,,350.00,1600.10,,Cloud monthly,abc-002,,,no,
+2026-01-03,Client Payment,Acme Client,2500,Income,Checking,Invoice 1102,normal_transactions.xlsx,2,,,,,,,,,,,,no,
+,,,,,,,messy_transactions.csv,3,1-3-26,Acme Supplies,Office paper,24.10,,1576.00,Office,,abc-003,,,yes,7
+bad-date,Parking Meter,City Parking,,Travel,Checking,invalid date,duplicates_and_exceptions.csv,5,,,,,,,,,,17.00,,no,
+2026-02-01,Restaurant Lunch,Chipotle,,Meals,Checking,near duplicate text,duplicates_and_exceptions.csv,3,,,,,,,,,,23.44,,no,
+,,,,,,,messy_transactions.csv,9,01/05/2026,Vendor X,Data entry error,(100.00),,1478.18,,,,,,no,
+2026-01-05,Software Subscription,Notion,-120.00,Software,Checking,Monthly plan,normal_transactions.csv,4,,,,,,,,,,,,yes,3
+2026-02-01,Restaurant,Chipotle,,Meals,Checking,,duplicates_and_exceptions.csv,1,,,,,,,,,,23.44,,no,
+,,,,,,,messy_transactions.csv,5,01/04/2026,,Transfer to savings,500.00,,1051.90,Transfers,,abc-004,,,no,
+2026-02-01,Restaurant,Chipotle,,Meals,Checking,,duplicates_and_exceptions.csv,2,,,,,,,,,,23.44,,no,
+2026-02-04,Malformed row,,,,,,duplicates_and_exceptions.csv,8,,,,,,,,,,,,yes,22
+,,,,,,,messy_transactions.csv,6,01/04/2026,Savings Account,Transfer from checking,,500.00,1551.90,Transfers,,abc-005,,,yes,10
+2026-01-06,Fuel,Shell,-64.21,Fuel,Credit Card,Company vehicle,normal_transactions.xlsx,5,,,,,,,,,,,,no,
+2026-01-02,Office Supplies,Staples,-124.56,Office Expense,Checking,Printer paper and pens,normal_transactions.csv,1,,,,,,,,,,,,no,
+,,,,,,,messy_transactions.csv,10,01/06/2026,Payroll,Payroll Deposit,,2500.00,3978.18,Income,jan payroll,,,,yes,14
+bad-date,Parking Meter,City Parking,,Travel,Checking,invalid date,duplicates_and_exceptions.csv,5,,,,,,,,,,17.00,,yes,19
+,,,,,,,messy_transactions.csv,1,01/02/2026, shell gas station 123 ,Fuel purchase #458,52.43,,1250.10,,vehicle trip,abc-001,,,no,
+,,,,,,,messy_transactions.csv,7,bad-date,Local Cafe,Lunch meeting,18.72,,1533.18,,,,,,no,
+2026-02-03,Transfer to Savings,,,Transfers,Checking,,duplicates_and_exceptions.csv,6,,,,,,,,,,300.00,,yes,20
+2026-01-03,Client Payment,Acme Client,2500.00,Income,Checking,Invoice 1102,normal_transactions.csv,2,,,,,,,,,,,,no,
+2026-01-02,Office Supplies,Staples,-124.56,Office Expense,Checking,Printer paper and pens,normal_transactions.xlsx,1,,,,,,,,,,,,yes,23
+2026-02-03,Transfer from Checking,Savings Account,,Transfers,Savings,,duplicates_and_exceptions.csv,7,,,,,,,,,,,300.00,no,
+2026-01-04,Utility Bill,Duke Energy,-318.12,Utilities,Checking,January service,normal_transactions.csv,3,,,,,,,,,,,,no,
+,,,,,,,messy_transactions.csv,2,2026-01-02,Amazon Web Services,AWS Jan invoice,,350.00,1600.10,,Cloud monthly,abc-002,,,yes,6
+2026-01-02,Office Supplies,Staples,-124.56,Office Expense,Checking,Printer paper and pens,normal_transactions.xlsx,1,,,,,,,,,,,,no,
+2026/02/02,,Amazon,,Software,Checking,missing description,duplicates_and_exceptions.csv,4,,,,,,,,,,120.00,,yes,18
+,,,,,,,messy_transactions.csv,6,01/04/2026,Savings Account,Transfer from checking,,500.00,1551.90,Transfers,,abc-005,,,no,
+2026-02-04,Malformed row,,,,,,duplicates_and_exceptions.csv,8,,,,,,,,,,,,no,
+2026/02/02,,Amazon,,Software,Checking,missing description,duplicates_and_exceptions.csv,4,,,,,,,,,,120.00,,no,
+2026-01-02,Office Supplies,Staples,-124.56,Office Expense,Checking,Printer paper and pens,normal_transactions.xlsx,1,,,,,,,,,,,,yes,23
+2026-02-03,Transfer to Savings,,,Transfers,Checking,,duplicates_and_exceptions.csv,6,,,,,,,,,,300.00,,no,
+,,,,,,,messy_transactions.csv,3,1-3-26,Acme Supplies,Office paper,24.10,,1576.00,Office,,abc-003,,,no,
+,,,,,,,messy_transactions.csv,10,01/06/2026,Payroll,Payroll Deposit,,2500.00,3978.18,Income,jan payroll,,,,no,
+,,,,,,,messy_transactions.csv,2,2026-01-02,Amazon Web Services,AWS Jan invoice,,350.00,1600.10,,Cloud monthly,abc-002,,,yes,6
+,,,,,,,messy_transactions.csv,6,01/04/2026,Savings Account,Transfer from checking,,500.00,1551.90,Transfers,,abc-005,,,yes,10
