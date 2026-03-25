@@ -134,6 +134,17 @@ export default function ReviewPage() {
           ) : (
             <div className="table-wrap">
               <table className="data-table">
+                <colgroup>
+                  <col style={{ width: "44px" }} />
+                  <col style={{ width: "90px" }} />
+                  <col style={{ width: "110px" }} />
+                  <col style={{ width: "210px" }} />
+                  <col style={{ width: "110px" }} />
+                  <col style={{ width: "180px" }} />
+                  <col style={{ width: "260px" }} />
+                  <col style={{ width: "120px" }} />
+                  <col style={{ width: "280px" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th />
@@ -177,14 +188,14 @@ export default function ReviewPage() {
                           </div>
                         ) : null}
                       </td>
-                      <td>
-                        <div className="flex flex-wrap gap-1">
+                      <td className="min-w-0">
+                        <div className="flex min-w-0 flex-wrap gap-1">
                           {row.flags.map((flag) => (
                             <FlagChip key={`${row.row_id}-${flag}`} value={flag} />
                           ))}
                         </div>
                       </td>
-                      <td>{row.review_status}</td>
+                      <td className="whitespace-nowrap">{row.review_status}</td>
                       <td className="mono-cell text-muted">
                         <div>Orig: {String(row.original_values["Description"] || row.original_values["Details"] || "")}</div>
                         <div>Clean: {row.description || ""}</div>
