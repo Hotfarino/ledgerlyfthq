@@ -45,7 +45,6 @@ echo
 
 run_test "API health endpoint" bash -c "curl -sS '${API_BASE}/health' | json_check \"assert payload.get('status') == 'ok'\""
 run_test "Execution guardrails endpoint" bash -c "curl -sS '${API_BASE}/execution/guardrails' | json_check \"assert payload.get('default_mode') == 'isolated'; assert payload.get('allow_legacy_live_send_reuse') is False\""
-run_test "Phase 0 report endpoint" bash -c "curl -sS '${API_BASE}/phase0/report?days=60' | json_check \"assert payload.get('lookback_days') == 60; assert 'pain_points' in payload\""
 
 MERGED_FILE="/Users/brandonwilliams/Desktop/LedgerLift/sample_data/merged_test_with_17_duplicates.csv"
 JOB_MERGED="$(upload_job "${MERGED_FILE}")"
@@ -53,7 +52,7 @@ run_test "Upload merged 17-duplicate dataset" bash -c "[[ -n '${JOB_MERGED}' ]]"
 run_test "Merged summary row count is 45" bash -c "curl -sS '${API_BASE}/jobs/${JOB_MERGED}/summary' | json_check \"assert payload.get('total_rows_imported') == 45\""
 run_test "Merged dataset has duplicate groups" bash -c "curl -sS '${API_BASE}/jobs/${JOB_MERGED}/duplicates' | json_check \"assert len(payload.get('duplicates', [])) > 0\""
 
-HEADER_FILE="$(mktemp /tmp/ledgerlyfthq_headers_XXXXXX.csv)"
+HEADER_FILE="$(mktemp -t ledgerlyfthq_headers).csv"
 cat > "${HEADER_FILE}" <<'CSV'
 Txn Dt,Details,Party,Dr,Cr,Cat,Acct,Memo
 2025-01-10,Service fee,Acme,25,,Ops,Checking,fee row
@@ -67,7 +66,7 @@ run_test "Header preview includes Txn Dt" bash -c "curl -sS '${API_BASE}/jobs/${
 CLEANUP_PAYLOAD='{"column_mapping":{"date":"Txn Dt","description":"Details","payee":"Party","debit":"Dr","credit":"Cr","category":"Cat","account":"Acct","notes":"Memo"},"execution_mode":"isolated"}'
 run_test "Apply cleanup with explicit mapping" bash -c "curl -sS -X POST -H 'Content-Type: application/json' -d '${CLEANUP_PAYLOAD}' '${API_BASE}/jobs/${JOB_HEADERS}/apply-cleanup' | json_check \"assert payload.get('summary', {}).get('total_rows_imported') == 2\""
 
-EDGE_FILE="$(mktemp /tmp/ledgerlyfthq_edges_XXXXXX.csv)"
+EDGE_FILE="$(mktemp -t ledgerlyfthq_edges).csv"
 cat > "${EDGE_FILE}" <<'CSV'
 Date,Description,Payee,Amount,Debit,Credit,Category,Account,Notes
 ,,,,,,, ,lonely note
@@ -80,7 +79,7 @@ JOB_EDGES="$(upload_job "${EDGE_FILE}")"
 run_test "Edge-case upload accepted" bash -c "[[ -n '${JOB_EDGES}' ]]"
 run_test "Edge exceptions include required flags" bash -c "curl -sS '${API_BASE}/jobs/${JOB_EDGES}/exceptions' | json_check \"flags={e['flag_type'] for e in payload.get('exceptions', [])}; required={'missing_date','invalid_date','invalid_amount','ambiguous_debit_credit','blank_description_payee','malformed_row'}; assert required.issubset(flags)\""
 
-DUP_FILE="$(mktemp /tmp/ledgerlyfthq_dups_XXXXXX.csv)"
+DUP_FILE="$(mktemp -t ledgerlyfthq_dups).csv"
 cat > "${DUP_FILE}" <<'CSV'
 Date,Description,Payee,Amount,Category,Account,Notes
 2025-02-01,Office Depot purchase,Office Depot,120,,Ops,one
@@ -108,7 +107,7 @@ fi
 run_test "Mark duplicate reviewed" bash -c "curl -sS -X POST -H 'Content-Type: application/json' -d '{\"target\":\"duplicates\",\"ids\":[\"${DUP_ID}\"],\"review_status\":\"reviewed\"}' '${API_BASE}/jobs/${JOB_DUPS}/mark-reviewed' | json_check \"assert payload.get('updated', 0) >= 1\""
 run_test "Duplicate reviewed status persisted" bash -c "curl -sS '${API_BASE}/jobs/${JOB_DUPS}/duplicates' | json_check \"dups=payload.get('duplicates', []); hit=[d for d in dups if d['id']=='${DUP_ID}']; assert hit and hit[0]['reviewed'] is True\""
 
-CAT_FILE="$(mktemp /tmp/ledgerlyfthq_category_XXXXXX.csv)"
+CAT_FILE="$(mktemp -t ledgerlyfthq_category).csv"
 cat > "${CAT_FILE}" <<'CSV'
 Date,Description,Payee,Amount,Category,Account,Notes
 2025-03-01,Fuel purchase,Shell,67.42,,Ops,rule target
@@ -133,7 +132,6 @@ run_test "Shared adapter mode is guarded" bash -c "python3 -c \"import json, os;
 run_test "Frontend dashboard loads" bash -c "curl -sS '${WEB_BASE}/dashboard' | grep -q 'Dashboard'"
 run_test "Frontend review page has Print View" bash -c "curl -sS '${WEB_BASE}/review' | grep -q 'Print View'"
 run_test "Frontend audit-log page has Print View" bash -c "curl -sS '${WEB_BASE}/audit-log' | grep -q 'Print View'"
-run_test "Frontend phase-0 page loads" bash -c "curl -sS '${WEB_BASE}/phase-0' | grep -q 'Phase 0 Diagnostics'"
 
 echo
 echo "Suite complete: PASS=${PASS_COUNT} FAIL=${FAIL_COUNT}"

@@ -21,12 +21,10 @@ from models.schemas import (
     JobRowsResponse,
     JobsResponse,
     MarkReviewedRequest,
-    Phase0Report,
     SuggestionsResponse,
     UploadResponse,
 )
 from services.job_service import job_service
-from services.phase0_diagnostics import build_phase0_report
 from services.repository import repository
 
 router = APIRouter()
@@ -53,11 +51,6 @@ def execution_guardrails() -> ExecutionGuardrails:
             "Shared adapter use must be explicitly selected and mode-guarded."
         ),
     )
-
-
-@router.get("/phase0/report", response_model=Phase0Report)
-def phase0_report(days: int = Query(default=60, ge=7, le=365)) -> Phase0Report:
-    return build_phase0_report(lookback_days=days)
 
 
 @router.get("/dashboard/metrics")

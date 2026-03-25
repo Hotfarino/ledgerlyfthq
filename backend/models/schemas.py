@@ -187,21 +187,3 @@ class ExecutionGuardrails(BaseModel):
     shared_adapter_enabled: bool
     allow_legacy_live_send_reuse: bool = False
     policy_note: str
-
-
-class Phase0PainPoint(BaseModel):
-    key: str
-    label: str
-    count: int
-    percent_of_signals: float
-
-
-class Phase0Report(BaseModel):
-    lookback_days: int
-    generated_at: datetime
-    jobs_analyzed: int
-    rows_analyzed: int
-    signals_total: int
-    top_pain_area: str
-    pain_points: List[Phase0PainPoint] = Field(default_factory=list)
-    notes: List[str] = Field(default_factory=list)

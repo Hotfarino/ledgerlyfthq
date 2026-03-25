@@ -9,21 +9,19 @@ import { MetricGrid } from "@/components/metric-grid";
 import { PageTitle } from "@/components/page-title";
 import { PrintButton } from "@/components/print-button";
 import { SectionCard } from "@/components/section-card";
-import { fetchDashboardMetrics, fetchJobs, fetchPhase0Report } from "@/lib/api";
-import { DashboardMetrics, JobRecord, Phase0Report } from "@/lib/types";
+import { fetchDashboardMetrics, fetchJobs } from "@/lib/api";
+import { DashboardMetrics, JobRecord } from "@/lib/types";
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [jobs, setJobs] = useState<JobRecord[]>([]);
-  const [phase0, setPhase0] = useState<Phase0Report | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchDashboardMetrics(), fetchJobs(), fetchPhase0Report(60)])
-      .then(([metricsData, jobsData, phase0Data]) => {
+    Promise.all([fetchDashboardMetrics(), fetchJobs()])
+      .then(([metricsData, jobsData]) => {
         setMetrics(metricsData);
         setJobs(jobsData);
-        setPhase0(phase0Data);
       })
       .catch((err: Error) => setError(err.message));
   }, []);
@@ -97,29 +95,14 @@ export default function DashboardPage() {
           </div>
         </SectionCard>
 
-        <div className="grid gap-6">
-          <SectionCard title="Phase 0 (Last 60 Days)">
-            {phase0 ? (
-              <ul className="space-y-2 text-sm">
-                <li>Top pain area: {phase0.top_pain_area}</li>
-                <li>Jobs analyzed: {phase0.jobs_analyzed}</li>
-                <li>Rows analyzed: {phase0.rows_analyzed}</li>
-                <li>Total signals: {phase0.signals_total}</li>
-              </ul>
-            ) : (
-              <p className="text-sm text-muted">No Phase 0 data available yet.</p>
-            )}
-          </SectionCard>
-
-          <SectionCard title="Workflow Guardrails">
-            <ul className="space-y-2 text-sm text-muted">
-              <li>Default assumption is isolated execution mode, not adapter reuse.</li>
-              <li>Any shared adapter path must be explicit, guarded, and documented.</li>
-              <li>Duplicates, exceptions, and category suggestions require reviewer approval.</li>
-              <li>No live QuickBooks API connection is used in this phase.</li>
-            </ul>
-          </SectionCard>
-        </div>
+        <SectionCard title="Workflow Guardrails">
+          <ul className="space-y-2 text-sm text-muted">
+            <li>Default assumption is isolated execution mode, not adapter reuse.</li>
+            <li>Any shared adapter path must be explicit, guarded, and documented.</li>
+            <li>Duplicates, exceptions, and category suggestions require reviewer approval.</li>
+            <li>No live QuickBooks API connection is used in this phase.</li>
+          </ul>
+        </SectionCard>
       </div>
     </div>
   );

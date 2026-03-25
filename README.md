@@ -73,7 +73,6 @@ LedgerLift/
 - `GET /jobs`
 - `GET /dashboard/metrics`
 - `GET /execution/guardrails`
-- `GET /phase0/report`
 - `GET /jobs/{job_id}/preview`
 - `GET /jobs/{job_id}/summary`
 - `GET /jobs/{job_id}/rows`

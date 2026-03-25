@@ -9,7 +9,6 @@ import {
   ExportSummary,
   JobPreview,
   JobRecord,
-  Phase0Report,
   TransactionRow,
   UploadResponse
 } from "@/lib/types";
@@ -46,10 +45,6 @@ export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
 
 export async function fetchExecutionGuardrails(): Promise<ExecutionGuardrails> {
   return request<ExecutionGuardrails>("/execution/guardrails");
-}
-
-export async function fetchPhase0Report(days = 60): Promise<Phase0Report> {
-  return request<Phase0Report>(`/phase0/report?days=${days}`);
 }
 
 export async function fetchJobs(): Promise<JobRecord[]> {
