@@ -22,3 +22,4 @@ data/exports/*
 
 # OS
 .DS_Store
+*.swp
