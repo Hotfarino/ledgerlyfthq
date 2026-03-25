@@ -136,6 +136,29 @@ cd ~/Desktop/LedgerLift
 ./scripts/start_desktop.sh
 ```
 
+## Persistent Local Services (macOS)
+
+If you want a more permanent connection, run background services (production mode) and keep them alive while logged in:
+
+```bash
+cd ~/Desktop/LedgerLift
+./scripts/start_persistent_services.sh
+```
+
+Check status:
+
+```bash
+cd ~/Desktop/LedgerLift
+./scripts/status_persistent_services.sh
+```
+
+Stop them:
+
+```bash
+cd ~/Desktop/LedgerLift
+./scripts/stop_persistent_services.sh
+```
+
 ## Manual Install Commands (if preferred)
 
 ### Backend

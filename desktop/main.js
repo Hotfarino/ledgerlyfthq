@@ -53,6 +53,35 @@ function spawnService(name, command, args, cwd) {
   return child;
 }
 
+function runCommand(name, command, args, cwd) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd,
+      env: {
+        ...process.env,
+        PYTHONUNBUFFERED: "1"
+      },
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    child.stdout.on("data", (data) => {
+      process.stdout.write(`[${name}] ${data}`);
+    });
+    child.stderr.on("data", (data) => {
+      process.stderr.write(`[${name}] ${data}`);
+    });
+
+    child.on("error", (error) => reject(error));
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${name} exited with code ${code}`));
+      }
+    });
+  });
+}
+
 async function waitForServices() {
   await waitOn({
     resources: [
@@ -94,10 +123,11 @@ async function startServices() {
   }
 
   if (!frontendRunning) {
+    await runCommand("frontend-build", npmCommand(), ["run", "build"], frontendDir);
     frontendProcess = spawnService(
       "frontend",
       npmCommand(),
-      ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", "3001"],
+      ["run", "start", "--", "--hostname", "127.0.0.1", "--port", "3001"],
       frontendDir
     );
     frontendStartedByDesktop = true;
