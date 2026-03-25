@@ -1,0 +1,133 @@
+LedgerLift Tutorial (Phase 1)
+Printable Reference
+
+1) What LedgerLift Is
+LedgerLift is a local bookkeeping cleanup assistant. It helps you import messy CSV/XLSX data,
+normalize fields, flag exceptions, review suspected duplicates, suggest categories, and export
+cleaned/review files.
+
+Important: LedgerLift does NOT replace accounting judgment. You make final decisions.
+
+2) Core Definitions
+- Imported Data: Raw rows from your source file.
+- Cleaned Data: Standardized values LedgerLift generates.
+- Exception: A row with warning/error requiring human review.
+- Duplicate Group: Transactions suspected to represent the same event.
+- Category Rule: "if contains" rule that suggests a category.
+- Suggestion Confidence: high / medium / low confidence signal.
+- Review Status: pending / reviewed / approved.
+- Audit Log: Before/after change history.
+- Summary Report: Counts and metrics at export time.
+
+3) First End-to-End Walkthrough
+
+A. Import
+1. Open Import page.
+2. Upload CSV/XLSX file.
+3. Review auto-detected column mapping.
+4. Fix incorrect mappings.
+5. Click Apply Mapping & Rerun Cleanup.
+
+Use when headers are non-standard (e.g., Txn Date, Merchant, Withdrawal, Deposit).
+
+B. Set Active Job
+1. Use Active Job selector in the top-right.
+2. Keep this selected while moving between pages.
+
+C. Review Cleaned Data
+1. Open Review Cleaned Data.
+2. Search/filter by payee/date/amount/category/flags.
+3. Inspect original vs cleaned values.
+4. Mark reviewed rows when satisfied.
+
+D. Handle Exceptions
+1. Open Exceptions page.
+2. Filter by severity: high, medium, low.
+3. Review flagged messages.
+4. Mark reviewed after decision.
+
+Common exceptions:
+- missing_date
+- invalid_numeric_amount
+- blank_description_payee
+- possible_transfer_pair
+- uncategorized_transaction
+
+E. Handle Duplicates
+1. Open Duplicate Review.
+2. Filter by confidence.
+3. Review grouped row indices and reasons.
+4. Decide what to keep in your accounting workflow.
+5. Mark reviewed in LedgerLift.
+
+Important: LedgerLift never auto-deletes duplicates.
+
+F. Category Suggestions
+1. Open Category Rules.
+2. Add rules:
+   - target field: payee/description/etc.
+   - contains text: e.g., shell
+   - suggested category: e.g., Fuel
+3. Run preview or apply.
+4. Review suggestion confidence before accepting outcomes.
+
+G. Export
+1. Open Export page.
+2. Download:
+   - cleaned CSV or XLSX
+   - exceptions CSV
+   - duplicate review CSV
+   - summary CSV
+
+Best practice: Keep all exported files together in your workpapers.
+
+H. Audit
+1. Open Audit Log page.
+2. Confirm normalization changes and workflow actions.
+
+4) Practical Case Uses
+
+Case 1: Split debit/credit bank CSV
+- Input: Withdrawal + Deposit, no unified amount.
+- LedgerLift: Builds signed amount and flags ambiguous sign cases.
+- Human decision: Final sign/account interpretation.
+
+Case 2: Duplicate transactions from overlapping exports
+- Input: Same transactions imported multiple times.
+- LedgerLift: Groups exact/near duplicates with confidence.
+- Human decision: Keep/remove in final accounting process.
+
+Case 3: Many uncategorized transactions
+- Input: Blank category fields.
+- LedgerLift: Suggests categories from custom rules.
+- Human decision: Accept/override suggestions.
+
+Case 4: Transfer-like cash movement
+- Input: Same date, equal opposite amounts.
+- LedgerLift: Flags possible transfer pairs.
+- Human decision: Confirm true transfer vs unrelated entries.
+
+Case 5: Messy text and date formats
+- Input: Inconsistent casing, whitespace, mixed date formats.
+- LedgerLift: Standardizes values and logs before/after changes.
+- Human decision: Final bookkeeping standard.
+
+5) Confidence and Review Guidance
+- High: usually fast review; still verify.
+- Medium: inspect supporting fields before action.
+- Low: treat as hint only; manual validation required.
+
+Recommended rule:
+Do not finalize accounting import until Exceptions and Duplicates are reviewed.
+
+6) If Something Looks Wrong
+1. Return to Import and fix column mapping.
+2. Rerun cleanup.
+3. Recheck Exceptions and Duplicates.
+4. Confirm Audit Log entries.
+5. Re-export.
+
+LedgerLift Phase 1 Boundary
+- Local-first only.
+- No live QuickBooks integration in Phase 1.
+- Human accounting judgment remains required.
