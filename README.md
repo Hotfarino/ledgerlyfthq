@@ -166,6 +166,23 @@ Located in `~/Desktop/LedgerLift/sample_data`:
 - `normal_transactions.xlsx`
 - `messy_transactions.csv`
 - `duplicates_and_exceptions.csv`
+- `merged_test_with_25_duplicates.csv` (generated test file)
+
+## Build a Merged Test Dataset
+
+Use the helper script to merge multiple files and inject a controlled number of duplicates.
+
+```bash
+cd ~/Desktop/LedgerLift
+./backend/.venv/bin/python scripts/build_test_dataset.py \
+  --inputs sample_data/normal_transactions.csv sample_data/messy_transactions.csv sample_data/duplicates_and_exceptions.csv sample_data/normal_transactions.xlsx \
+  --output sample_data/merged_test_with_25_duplicates.csv \
+  --duplicate-count 25 \
+  --seed 42 \
+  --shuffle
+```
+
+Adjust `--duplicate-count` to match your target duplicate volume for testing.
 
 ## Sample V1 Test Flow
 
